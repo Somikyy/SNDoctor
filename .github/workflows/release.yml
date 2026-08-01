@@ -22,7 +22,7 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Behaviour is proven offline: 32 assertions on synthetic fixture jars.
+      # Behaviour is proven offline: 39 assertions on synthetic fixture jars.
       - name: Self-test (offline)
         run: bash tools/offline/verify.sh
 

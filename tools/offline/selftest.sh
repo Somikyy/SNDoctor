@@ -338,8 +338,8 @@ java -cp "$CLASSES" -Dfile.encoding=UTF-8 \
     network.somikyy.sndoctor.bukkit.ConfigProbe \
     "$ROOT/src/main/resources/config.yml" > "$WORK/config.txt"
 
-expect() { # expect <description> <exact line the loader must have produced>
-  if grep -qxF -- "$2" "$WORK/config.txt"; then
+expect() { # expect <description> <exact line the probe must have produced>, read from $EXPECT_FILE
+  if grep -qxF -- "$2" "$EXPECT_FILE"; then
     echo "  ok   $1"
   else
     echo "  FAIL $1 (expected '$2')"
@@ -347,12 +347,75 @@ expect() { # expect <description> <exact line the loader must have produced>
   fi
 }
 
+EXPECT_FILE="$WORK/config.txt"
 expect "banner does not break parsing: language" "language=ru"
 expect "  update-check read"                     "update-check=true"
 expect "  scan.on-start read"                    "scan.on-start=true"
 expect "  scan.start-delay read as a number"     "scan.start-delay=100"
 expect "  reports.json read"                     "reports.json=true"
 expect "  reports.keep read as a number"         "reports.keep=20"
+
+# ---------------------------------------------------------------- console encoding
+# A Russian Windows console runs on cp866. Writing the report there as UTF-8 produces
+# mojibake, and writing it as cp866 loses every character that page lacks - Java replaces
+# each one with a question mark and says nothing. Both were happening: the first report a
+# real admin ran came out unreadable.
+#
+# The property that matters: after fitting, the text must be FULLY encodable in the target
+# charset, so the encoder never has to substitute anything behind our back.
+echo "==> console encoding"
+# Exit code is 2 by design (the fixtures contain red plugins), so do not let -e stop us.
+java -Dstdout.encoding=IBM866 -jar "$JAR" "$PLUGINS" --java 21 > "$WORK/cp866.out" 2>&1 || true
+
+cat > "$WORK/probe/ConsoleProbe.java" <<'EOF'
+package network.somikyy.sndoctor.cli;
+
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class ConsoleProbe {
+
+    /** ESC[ - the start of every ANSI colour sequence, as an escape so no raw control
+     *  byte has to survive living inside a shell script. */
+    private static final String ANSI_CSI = "\u001B[";
+
+    public static void main(String[] args) throws Exception {
+        // Every decoration the renderer uses, plus a Cyrillic word. Compiled with
+        // -encoding UTF-8, same as the real sources.
+        String sample = "● ✗ — «q» • · → ─ "
+                + "проверка";
+
+        for (String name : new String[]{"IBM866", "windows-1251"}) {
+            Charset cs = Charset.forName(name);
+            String fitted = ConsoleText.fitTo(sample, cs);
+            CharsetEncoder encoder = cs.newEncoder();
+            System.out.println(name + ".encodable=" + encoder.canEncode(fitted));
+            System.out.println(name + ".lossy=" + fitted.contains("?"));
+        }
+        System.out.println("utf8.untouched="
+                + ConsoleText.fitTo(sample, Charset.forName("UTF-8")).equals(sample));
+
+        // End to end: what the CLI actually wrote must decode back to readable Russian.
+        String report = new String(Files.readAllBytes(Path.of(args[0])), Charset.forName("IBM866"));
+        System.out.println("cli.readable="
+                + report.contains("проверка"));
+        System.out.println("cli.no-ansi=" + !report.contains(ANSI_CSI));
+    }
+}
+EOF
+javac -nowarn -encoding UTF-8 --release 17 -cp "$CLASSES" -d "$CLASSES" "$WORK/probe/ConsoleProbe.java"
+java -cp "$CLASSES" network.somikyy.sndoctor.cli.ConsoleProbe "$WORK/cp866.out" > "$WORK/console.checks"
+
+EXPECT_FILE="$WORK/console.checks"
+expect "cp866 output is fully encodable"        "IBM866.encodable=true"
+expect "  nothing silently became a '?'"        "IBM866.lossy=false"
+expect "cp1251 output is fully encodable"       "windows-1251.encodable=true"
+expect "  nothing silently became a '?'"        "windows-1251.lossy=false"
+expect "UTF-8 output is left alone"             "utf8.untouched=true"
+expect "report written to a cp866 console reads back as Russian" "cli.readable=true"
+expect "  and carries no ANSI escapes when redirected"           "cli.no-ansi=true"
 
 echo
 if [[ $FAILED -eq 0 ]]; then

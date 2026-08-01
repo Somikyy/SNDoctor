@@ -16,6 +16,7 @@ import network.somikyy.sndoctor.report.TextRenderer;
 
 import java.io.File;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,8 +30,12 @@ import java.nio.file.Path;
 public final class SNDoctorCli {
 
     public static void main(String[] args) {
-        PrintStream out = new PrintStream(System.out, true, StandardCharsets.UTF_8);
-        PrintStream err = new PrintStream(System.err, true, StandardCharsets.UTF_8);
+        // Written in whatever the console actually decodes, not blindly in UTF-8: a Russian
+        // Windows console is on cp866, and UTF-8 bytes arrive there as mojibake. Everything
+        // printed through these streams goes through ConsoleText.fitTo first.
+        Charset charset = ConsoleText.outputCharset();
+        PrintStream out = ConsoleText.stream(System.out, charset);
+        PrintStream err = ConsoleText.stream(System.err, charset);
 
         String dir = null;
         String jsonOut = null;
@@ -39,7 +44,10 @@ public final class SNDoctorCli {
         int serverJava = 0;
         boolean ru = true;
         boolean full = false;
-        boolean colour = System.console() != null && System.getenv("NO_COLOR") == null;
+        // Off by default on a plain Windows console, which prints the escape codes instead of
+        // obeying them. --color forces it back on for terminals that handle ANSI but are not
+        // recognised.
+        boolean colour = ConsoleText.ansiSupported();
 
         for (int i = 0; i < args.length; i++) {
             String a = args[i];
@@ -169,6 +177,10 @@ public final class SNDoctorCli {
                   --lang ru|en    язык вывода, по умолчанию ru
                   --full          показывать и справочные находки, и все зелёные плагины
                   --no-color      без ANSI-цветов
+                  --color         включить цвета принудительно. По умолчанию в обычной консоли
+                                  Windows они выключены: PowerShell печатает сами коды вместо
+                                  того, чтобы им подчиняться. В Windows Terminal и Git Bash
+                                  цвет включается сам.
                   -v, --version   версия
                   -h, --help      эта справка
 
