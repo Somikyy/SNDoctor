@@ -103,15 +103,21 @@ SNDoctor 26.8.1  —  проверка плагинов на совместим�
 
 ## Команды и права
 
-| команда | описание | право |
+| команда | что делает | право |
 |---|---|---|
+| `/sndoctor` | без аргументов сразу запускает проверку — то же, что `scan` | `sndoctor.use` |
 | `/sndoctor scan` | сводка в чат, полный отчёт в файл | `sndoctor.use` |
 | `/sndoctor full` | то же плюс справочные находки и список зелёных | `sndoctor.use` |
-| `/sndoctor scan --lang en` | отчёт на английском | `sndoctor.use` |
-| `/sndoctor version` | версия и цель проверки | `sndoctor.use` |
-| `/sndoctor reload` | перечитать `config.yml` без рестарта | `sndoctor.reload` |
+| `/sndoctor version` | версия плагина и цель проверки | `sndoctor.use` |
+| `/sndoctor reload` | перечитать `config.yml` без рестарта сервера | `sndoctor.reload` |
+| `/sndoctor help` | список команд | `sndoctor.use` |
 
-Алиасы: `/snd`, `/sndoc`, `/снд`. Оба права по умолчанию у операторов.
+Алиасы: `/snd`, `/sndoc`, `/снд`. Флаги `--lang ru|en` и `--full` работают и в игре:
+`/snd scan --lang en --full`. Автодополнение по Tab есть у подкоманд, флагов и значений `--lang`.
+
+Оба права по умолчанию только у операторов. Вся команда закрыта правом `sndoctor.use` на уровне
+`plugin.yml`, поэтому одного `sndoctor.reload` не хватит — без `sndoctor.use` команда не введётся
+вообще.
 
 ---
 
