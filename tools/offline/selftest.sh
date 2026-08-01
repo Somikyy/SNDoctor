@@ -313,6 +313,19 @@ fi
 # would quietly hand back every default instead, and the admin's settings would be ignored
 # with no error to go on. So the real loader is run against the real file.
 echo "==> shipped config.yml"
+
+# Probes are compiled into a COPY of the class output, never into it.
+#
+# They live in the same packages as the code they poke at, so they need the same classpath -
+# but the CI check compares the offline classes against the same sources built with the real
+# paper-api, and Gradle compiles only src/main/java. A probe left in build/offline/classes
+# shows up as a difference and fails that comparison for no reason. It did exactly that once.
+#
+# A copy also keeps the classpath a single entry, which matters because ':' and ';' separators
+# differ between Linux and Git Bash.
+PROBE_CP="$WORK/probe-classes"
+rm -rf "$PROBE_CP"
+cp -r "$CLASSES" "$PROBE_CP"
 mkdir -p "$WORK/probe"
 cat > "$WORK/probe/ConfigProbe.java" <<'EOF'
 package network.somikyy.sndoctor.bukkit;
@@ -333,8 +346,8 @@ public class ConfigProbe {
 EOF
 # Compiled straight into the offline class output so the classpath stays a single entry -
 # ':' and ';' separators differ between Linux and Git Bash and are not worth the trouble.
-javac -nowarn -encoding UTF-8 --release 17 -cp "$CLASSES" -d "$CLASSES" "$WORK/probe/ConfigProbe.java"
-java -cp "$CLASSES" -Dfile.encoding=UTF-8 \
+javac -nowarn -encoding UTF-8 --release 17 -cp "$PROBE_CP" -d "$PROBE_CP" "$WORK/probe/ConfigProbe.java"
+java -cp "$PROBE_CP" -Dfile.encoding=UTF-8 \
     network.somikyy.sndoctor.bukkit.ConfigProbe \
     "$ROOT/src/main/resources/config.yml" > "$WORK/config.txt"
 
@@ -405,8 +418,8 @@ public class ConsoleProbe {
     }
 }
 EOF
-javac -nowarn -encoding UTF-8 --release 17 -cp "$CLASSES" -d "$CLASSES" "$WORK/probe/ConsoleProbe.java"
-java -cp "$CLASSES" network.somikyy.sndoctor.cli.ConsoleProbe "$WORK/cp866.out" > "$WORK/console.checks"
+javac -nowarn -encoding UTF-8 --release 17 -cp "$PROBE_CP" -d "$PROBE_CP" "$WORK/probe/ConsoleProbe.java"
+java -cp "$PROBE_CP" network.somikyy.sndoctor.cli.ConsoleProbe "$WORK/cp866.out" > "$WORK/console.checks"
 
 EXPECT_FILE="$WORK/console.checks"
 expect "cp866 output is fully encodable"        "IBM866.encodable=true"
