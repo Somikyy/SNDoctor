@@ -13,11 +13,16 @@ jobs:
 
       # Both builds below must use the SAME JDK: the stub check compares the bytecode they
       # produce, and two different javac versions would show up as differences that mean
-      # nothing. 17 is the version the project targets.
+      # nothing.
+      #
+      # 21, not 17: paper-api 1.21.4 is published for Java 21 and Gradle will not resolve it
+      # onto a Java 17 classpath. Both builds compile with 21 and emit 17 (`--release 17` in
+      # build-offline.sh, `options.release` in build.gradle.kts), so the jar still runs on the
+      # old servers SNDoctor exists to diagnose.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       # The offline path is the source of truth for behaviour: it needs no network, so a
       # repo.papermc.io outage can never turn CI red for the wrong reason. It also needs

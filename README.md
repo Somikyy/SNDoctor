@@ -235,7 +235,9 @@ git clone https://github.com/Somikyy/SNDoctor.git && cd SNDoctor && bash tools/o
 Это не экзотика, а основной путь: `repo.papermc.io` и Maven Central для машины в РФ бывают
 недоступны, и сборка инструмента для сломанного сервера не должна от этого зависеть.
 
-Обычная сборка через Gradle тоже есть, ей нужен доступ к `repo.papermc.io`:
+Обычная сборка через Gradle тоже есть, ей нужен доступ к `repo.papermc.io` и JDK 21 — `paper-api`
+опубликован как Java 21, и Gradle не отдаст его на classpath под 17. Байт-код при этом остаётся
+17-м, так что готовый jar по-прежнему запускается на старых серверах:
 
 ```bash
 gradle build

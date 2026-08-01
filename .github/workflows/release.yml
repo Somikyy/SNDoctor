@@ -14,10 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 21 compiles, 17 is emitted - paper-api 1.21.4 is published for Java 21 and Gradle will
+      # not resolve it onto a Java 17 classpath. Both builds must use this same JDK, otherwise
+      # the stub comparison below drowns in javac version noise.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       # Behaviour is proven offline: 32 assertions on synthetic fixture jars.
       - name: Self-test (offline)
