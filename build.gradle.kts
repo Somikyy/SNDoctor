@@ -1,3 +1,5 @@
+import org.gradle.api.attributes.java.TargetJvmVersion
+
 plugins {
     java
 }
@@ -16,6 +18,22 @@ dependencies {
     // SNDoctor ships zero runtime dependencies on purpose - it has to be droppable onto a
     // server that is already broken, without shading anything into that server's classpath.
     compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT")
+}
+
+// paper-api 1.21.4 ships Java 21 class files (major version 65). Gradle will not put a Java 21
+// library on a classpath it believes targets Java 17, and `options.release` below is exactly
+// what tells it we target 17 - so raising the toolchain alone does not help, the release flag
+// re-declares 17 and resolution fails again with "looking for a library compatible with JVM
+// runtime version 17".
+//
+// The two requirements are not actually in conflict. javac reads Java 21 class files off the
+// classpath perfectly well while emitting Java 17 bytecode; only Gradle's variant matching
+// objects. paper-api is compileOnly and never reaches anyone's runtime, so what the compile
+// classpath is allowed to contain and what we emit are separate questions. Say so.
+configurations.named("compileClasspath") {
+    attributes {
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 21)
+    }
 }
 
 java {
