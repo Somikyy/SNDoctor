@@ -231,23 +231,50 @@ reports:
 Основная команда: [ICODE]/sndoctor[/ICODE]   ·   Алиасы: [ICODE]/snd[/ICODE], [ICODE]/sndoc[/ICODE], [ICODE]/снд[/ICODE]
 
 [TABLE]
-[TR][TH]команда[/TH][TH]описание[/TH][TH]право[/TH][/TR]
+[TR][TH]команда[/TH][TH]что делает[/TH][TH]право[/TH][/TR]
+[TR][TD][ICODE]/sndoctor[/ICODE][/TD][TD]без аргументов сразу запускает проверку — то же, что scan[/TD][TD][ICODE]sndoctor.use[/ICODE][/TD][/TR]
 [TR][TD][ICODE]/sndoctor scan[/ICODE][/TD][TD]сводка в чат, полный отчёт в файл[/TD][TD][ICODE]sndoctor.use[/ICODE][/TD][/TR]
 [TR][TD][ICODE]/sndoctor full[/ICODE][/TD][TD]то же плюс справочные находки и список зелёных[/TD][TD][ICODE]sndoctor.use[/ICODE][/TD][/TR]
-[TR][TD][ICODE]/sndoctor scan --lang en[/ICODE][/TD][TD]отчёт на английском[/TD][TD][ICODE]sndoctor.use[/ICODE][/TD][/TR]
-[TR][TD][ICODE]/sndoctor version[/ICODE][/TD][TD]версия и цель проверки[/TD][TD][ICODE]sndoctor.use[/ICODE][/TD][/TR]
-[TR][TD][ICODE]/sndoctor reload[/ICODE][/TD][TD]перечитать config.yml без рестарта[/TD][TD][ICODE]sndoctor.reload[/ICODE][/TD][/TR]
+[TR][TD][ICODE]/sndoctor version[/ICODE][/TD][TD]версия плагина и цель проверки[/TD][TD][ICODE]sndoctor.use[/ICODE][/TD][/TR]
+[TR][TD][ICODE]/sndoctor reload[/ICODE][/TD][TD]перечитать config.yml без рестарта сервера[/TD][TD][ICODE]sndoctor.reload[/ICODE][/TD][/TR]
+[TR][TD][ICODE]/sndoctor help[/ICODE][/TD][TD]список команд[/TD][TD][ICODE]sndoctor.use[/ICODE][/TD][/TR]
 [/TABLE]
+
+Флаги работают и в игре, не только в командной строке:
+
+[TABLE]
+[TR][TH]флаг[/TH][TH]смысл[/TH][/TR]
+[TR][TD][ICODE]--lang ru|en[/ICODE][/TD][TD]язык отчёта на один запуск, перекрывает config.yml[/TD][/TR]
+[TR][TD][ICODE]--full[/ICODE][/TD][TD]то же, что подкоманда full[/TD][/TR]
+[/TABLE]
+
+Например: [ICODE]/snd scan --lang en --full[/ICODE]
+
+Автодополнение по Tab работает и у подкоманд, и у флагов, и у значений [ICODE]--lang[/ICODE].
+
+Проверка идёт асинхронно, главный поток не трогается. В чат уходит сводка и первые десять красных, полный отчёт пишется в [ICODE]plugins/SNDoctor/reports/[/ICODE]. Пока проверка идёт, повторный запуск вторую не стартует.
+
 
 [SIZE=5][B]Права[/B][/SIZE]
 
 [TABLE]
 [TR][TH]право[/TH][TH]по умолчанию[/TH][TH]что даёт[/TH][/TR]
-[TR][TD][ICODE]sndoctor.use[/ICODE][/TD][TD]оператор[/TD][TD]запуск проверки и просмотр отчёта[/TD][/TR]
+[TR][TD][ICODE]sndoctor.use[/ICODE][/TD][TD]оператор[/TD][TD]доступ к команде: запуск проверки, просмотр отчёта, версия[/TD][/TR]
 [TR][TD][ICODE]sndoctor.reload[/ICODE][/TD][TD]оператор[/TD][TD]перезагрузка config.yml[/TD][/TR]
 [/TABLE]
 
-Автодополнение по Tab работает у всех аргументов.
+[B]Важная деталь.[/B] Вся команда закрыта правом [ICODE]sndoctor.use[/ICODE] на уровне plugin.yml, поэтому одного [ICODE]sndoctor.reload[/ICODE] не хватит: без [ICODE]sndoctor.use[/ICODE] игрок не сможет ввести команду вообще.
+
+[SPOILER="Пример настройки групп (LuckPerms)"]
+Хелперу — только смотреть, без права менять настройки:
+[CODE]/lp group helper permission set sndoctor.use true[/CODE]
+
+Администратору — всё:
+[CODE]/lp group admin permission set sndoctor.use true
+/lp group admin permission set sndoctor.reload true[/CODE]
+
+Если раздавать права никому не нужно — не делай ничего: оба права по умолчанию есть только у операторов.
+[/SPOILER]
 
 
 [SIZE=5][B]Установка[/B][/SIZE]

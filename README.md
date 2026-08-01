@@ -103,15 +103,21 @@ SNDoctor 26.8.1  —  проверка плагинов на совместим�
 
 ## Команды и права
 
-| команда | описание | право |
+| команда | что делает | право |
 |---|---|---|
+| `/sndoctor` | без аргументов сразу запускает проверку — то же, что `scan` | `sndoctor.use` |
 | `/sndoctor scan` | сводка в чат, полный отчёт в файл | `sndoctor.use` |
 | `/sndoctor full` | то же плюс справочные находки и список зелёных | `sndoctor.use` |
-| `/sndoctor scan --lang en` | отчёт на английском | `sndoctor.use` |
-| `/sndoctor version` | версия и цель проверки | `sndoctor.use` |
-| `/sndoctor reload` | перечитать `config.yml` без рестарта | `sndoctor.reload` |
+| `/sndoctor version` | версия плагина и цель проверки | `sndoctor.use` |
+| `/sndoctor reload` | перечитать `config.yml` без рестарта сервера | `sndoctor.reload` |
+| `/sndoctor help` | список команд | `sndoctor.use` |
 
-Алиасы: `/snd`, `/sndoc`, `/снд`. Оба права по умолчанию у операторов.
+Алиасы: `/snd`, `/sndoc`, `/снд`. Флаги `--lang ru|en` и `--full` работают и в игре:
+`/snd scan --lang en --full`. Автодополнение по Tab есть у подкоманд, флагов и значений `--lang`.
+
+Оба права по умолчанию только у операторов. Вся команда закрыта правом `sndoctor.use` на уровне
+`plugin.yml`, поэтому одного `sndoctor.reload` не хватит — без `sndoctor.use` команда не введётся
+вообще.
 
 ---
 
@@ -295,6 +301,10 @@ GPL-3.0-or-later. См. [LICENSE](LICENSE).
 
 ---
 
-Готовый текст для публикации на форумах: [docs/RESOURCE-PAGE.md](docs/RESOURCE-PAGE.md) (читаемый)
-и [docs/RESOURCE-PAGE.bbcode.txt](docs/RESOURCE-PAGE.bbcode.txt) (BBCode для XenForo —
-spigotmc.ru, black-minecraft.ru).
+Готовый текст для публикации на форумах:
+
+- [docs/RESOURCE-PAGE.md](docs/RESOURCE-PAGE.md) — читаемая версия
+- [docs/RESOURCE-PAGE.bbcode.txt](docs/RESOURCE-PAGE.bbcode.txt) — BBCode для XenForo
+  (spigotmc.ru, black-minecraft.ru)
+- [docs/RESOURCE-PAGE.commands.bbcode.txt](docs/RESOURCE-PAGE.commands.bbcode.txt) — команды и
+  права отдельным блоком, для форумов, где под них есть своё поле
