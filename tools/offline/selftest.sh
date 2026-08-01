@@ -283,13 +283,36 @@ assert "Corrupt.jar skipped, not fatal"          "verdict('Corrupt') eq 'SKIPPED
 
 assert 'exit code reflects worst verdict'        '$R->{summary}{red} >= 1'
 
+CLASSES="$ROOT/build/offline/classes"
+
+# ---------------------------------------------------------------- Bukkit API surface
+# The offline build compiles against hand-written stubs, and a stub whose signature differs
+# from the real Bukkit one is invisible at compile time: the return type is part of the JVM
+# method descriptor, so `Object runTaskAsynchronously(...)` compiles cleanly and then dies on
+# a live server with NoSuchMethodError. That shipped once. Never again silently.
+#
+# This is the offline half of the guard: the descriptors the build emits must equal the ones
+# recorded in git. CI runs the other half, comparing the same sources built against the real
+# paper-api - that is what ties the recorded file to reality.
+echo "==> Bukkit API surface"
+bash "$ROOT/tools/offline/api-surface.sh" "$CLASSES" > "$WORK/api-surface.txt"
+if diff -u "$ROOT/tools/offline/bukkit-api-surface.txt" "$WORK/api-surface.txt" \
+        > "$WORK/api-surface.diff" 2>&1; then
+  echo "  ok   emitted Bukkit descriptors match tools/offline/bukkit-api-surface.txt"
+else
+  echo "  FAIL emitted Bukkit descriptors drifted from the recorded surface:"
+  sed 's/^/         /' "$WORK/api-surface.diff"
+  echo "         If the change is deliberate, re-record it:"
+  echo "         bash tools/offline/api-surface.sh build/offline/classes > tools/offline/bukkit-api-surface.txt"
+  FAILED=$((FAILED + 1))
+fi
+
 # ---------------------------------------------------------------- shipped config.yml
 # config.yml is read by SNDoctor's own MiniYaml, not by Bukkit, and its header is a wall of
 # box-drawing comments. A stray quote or colon in that banner would not raise anything - it
 # would quietly hand back every default instead, and the admin's settings would be ignored
 # with no error to go on. So the real loader is run against the real file.
 echo "==> shipped config.yml"
-CLASSES="$ROOT/build/offline/classes"
 mkdir -p "$WORK/probe"
 cat > "$WORK/probe/ConfigProbe.java" <<'EOF'
 package network.somikyy.sndoctor.bukkit;

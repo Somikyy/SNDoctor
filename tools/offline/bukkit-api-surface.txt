@@ -1,0 +1,10 @@
+org/bukkit/Server.getScheduler:()Lorg/bukkit/scheduler/BukkitScheduler;
+org/bukkit/Server.getVersion:()Ljava/lang/String;
+org/bukkit/command/CommandSender.hasPermission:(Ljava/lang/String;)Z
+org/bukkit/command/CommandSender.sendMessage:(Ljava/lang/String;)V
+org/bukkit/command/PluginCommand.setExecutor:(Lorg/bukkit/command/CommandExecutor;)V
+org/bukkit/command/PluginCommand.setTabCompleter:(Lorg/bukkit/command/TabCompleter;)V
+org/bukkit/plugin/java/JavaPlugin."<init>":()V
+org/bukkit/scheduler/BukkitScheduler.runTask:(Lorg/bukkit/plugin/Plugin;Ljava/lang/Runnable;)Lorg/bukkit/scheduler/BukkitTask;
+org/bukkit/scheduler/BukkitScheduler.runTaskAsynchronously:(Lorg/bukkit/plugin/Plugin;Ljava/lang/Runnable;)Lorg/bukkit/scheduler/BukkitTask;
+org/bukkit/scheduler/BukkitScheduler.runTaskLaterAsynchronously:(Lorg/bukkit/plugin/Plugin;Ljava/lang/Runnable;J)Lorg/bukkit/scheduler/BukkitTask;
