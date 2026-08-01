@@ -1,0 +1,139 @@
+# SNDoctor - Spigot-mapped NMS class names.
+#
+# Format:  SpigotName=MojangName
+#
+# Why this file exists
+# --------------------
+# Starting with Minecraft 26.1 Mojang no longer ships obfuscated server jars, and Paper
+# fully dropped its internal remapper. A plugin compiled against Spigot-mapped internal
+# names will not run on 26.1+ regardless of whether the server is Paper or Spigot.
+#
+# Every name on the left is a class name that ONLY exists in the Spigot mapping set.
+# Names that are identical in both mapping sets (Entity, ItemStack, MinecraftServer,
+# Packet, Scoreboard, Chunk, ...) are deliberately absent - they prove nothing.
+#
+# You can extend this list without rebuilding:
+#   plugin mode : plugins/SNDoctor/spigot-names.txt
+#   CLI mode    : --names <file>
+# Entries in your file are merged on top of these.
+
+# --- entities ---------------------------------------------------------------
+EntityPlayer=ServerPlayer
+EntityHuman=Player
+EntityLiving=LivingEntity
+EntityInsentient=Mob
+EntityCreature=PathfinderMob
+EntityAnimal=Animal
+EntityMonster=Monster
+EntityAgeable=AgeableMob
+EntityVillager=Villager
+EntityItem=ItemEntity
+EntityArmorStand=ArmorStand
+EntityTypes=EntityType
+EntityExperienceOrb=ExperienceOrb
+EntityArrow=AbstractArrow
+EntityFireball=Fireball
+EntityTameableAnimal=TamableAnimal
+EntityCreeper=Creeper
+EntityEnderman=EnderMan
+EntityZombie=Zombie
+EntitySkeleton=Skeleton
+
+# --- networking -------------------------------------------------------------
+PlayerConnection=ServerGamePacketListenerImpl
+NetworkManager=Connection
+PacketDataSerializer=FriendlyByteBuf
+LoginListener=ServerLoginPacketListenerImpl
+PlayerConnectionUtils=PacketUtils
+DataWatcher=SynchedEntityData
+DataWatcherObject=EntityDataAccessor
+DataWatcherRegistry=EntityDataSerializers
+
+# --- world / blocks ---------------------------------------------------------
+WorldServer=ServerLevel
+IBlockData=BlockState
+TileEntity=BlockEntity
+BlockPosition=BlockPos
+ChunkCoordIntPair=ChunkPos
+ChunkProviderServer=ServerChunkCache
+PlayerChunkMap=ChunkMap
+BiomeBase=Biome
+IWorldReader=LevelReader
+IBlockAccess=BlockGetter
+BlockAccessAir=EmptyBlockGetter
+GeneratorAccess=LevelAccessor
+StructureBoundingBox=BoundingBox
+RegionLimitedWorldAccess=WorldGenRegion
+IChunkAccess=ChunkAccess
+
+# --- items / inventory ------------------------------------------------------
+IInventory=Container
+InventoryPlayer=Inventory
+InventorySubcontainer=SimpleContainer
+ContainerAccess=ContainerLevelAccess
+Containers=MenuType
+ItemArmor=ArmorItem
+ItemTool=DiggerItem
+CraftingManager=RecipeManager
+IRecipe=Recipe
+ShapedRecipes=ShapedRecipe
+
+# --- nbt / text / registry --------------------------------------------------
+NBTTagCompound=CompoundTag
+NBTTagList=ListTag
+NBTTagString=StringTag
+NBTTagInt=IntTag
+NBTBase=Tag
+NBTCompressedStreamTools=NbtIo
+MojangsonParser=TagParser
+IChatBaseComponent=Component
+ChatComponentText=TextComponent
+ChatMessage=TranslatableComponent
+IChatMutableComponent=MutableComponent
+ChatModifier=Style
+EnumChatFormat=ChatFormatting
+MinecraftKey=ResourceLocation
+IRegistry=Registry
+RegistryMaterials=MappedRegistry
+LocaleLanguage=Language
+
+# --- math / misc ------------------------------------------------------------
+Vec3D=Vec3
+BaseBlockPosition=Vec3i
+AxisAlignedBB=AABB
+MathHelper=Mth
+EnumDirection=Direction
+EnumHand=InteractionHand
+EnumGamemode=GameType
+EnumDifficulty=Difficulty
+EnumColor=DyeColor
+MovingObjectPosition=HitResult
+MovingObjectPositionBlock=BlockHitResult
+SystemUtils=Util
+
+# --- ai / pathfinding -------------------------------------------------------
+PathfinderGoal=Goal
+PathfinderGoalSelector=GoalSelector
+PathfinderGoalFloat=FloatGoal
+NavigationAbstract=PathNavigation
+Navigation=GroundPathNavigation
+ControllerMove=MoveControl
+ControllerLook=LookControl
+AttributeModifiable=AttributeInstance
+GenericAttributes=Attributes
+BehaviorController=Brain
+VillagePlace=PoiManager
+VillagePlaceType=PoiType
+
+# --- server / players -------------------------------------------------------
+PlayerInteractManager=ServerPlayerGameMode
+ScoreboardTeam=PlayerTeam
+ScoreboardObjective=Objective
+ScoreboardServer=ServerScoreboard
+IScoreboardCriteria=ObjectiveCriteria
+AdvancementDataPlayer=PlayerAdvancements
+Statistic=Stat
+StatisticList=Stats
+CommandListenerWrapper=CommandSourceStack
+ICommandListener=CommandSource
+CustomFunction=CommandFunction

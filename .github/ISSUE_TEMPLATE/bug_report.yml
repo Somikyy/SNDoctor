@@ -1,0 +1,55 @@
+name: Ошибка в работе SNDoctor
+description: Не запускается, падает, зависает, показывает иероглифы
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что произошло
+      description: Что ты сделал, что ожидал увидеть и что увидел вместо этого
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: В каком режиме
+      options:
+        - Командная строка (java -jar SNDoctor.jar ...)
+        - Плагин на сервере (/sndoctor scan)
+        - Автопроверка при запуске сервера
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия SNDoctor
+      description: Вывод /sndoctor version или имя файла jar
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: java
+    attributes:
+      label: Версия Java
+      description: Вывод java -version
+      placeholder: 21.0.11 Temurin
+    validations:
+      required: true
+
+  - type: input
+    id: server
+    attributes:
+      label: Ядро и версия сервера
+      description: Если запускал из командной строки — напиши операционную систему
+      placeholder: Paper 1.21.4 / Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Вывод в консоль или стектрейс
+      render: text

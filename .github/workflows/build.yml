@@ -1,0 +1,54 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The offline path is the source of truth for correctness: it needs no network,
+      # so a repo.papermc.io outage can never turn CI red for the wrong reason. It also
+      # needs nothing beyond the JDK, bash and perl, which is why it is the same command
+      # a contributor runs on their own machine.
+      - name: Build and self-test (offline)
+        run: bash tools/offline/verify.sh
+
+      # core/, cli/ and report/ must never touch Bukkit - that invariant is what makes the
+      # standalone CLI work on a machine with no server installed.
+      - name: Check layering invariant
+        run: |
+          if grep -rn "import org.bukkit" src/main/java/network/somikyy/sndoctor/core \
+                                          src/main/java/network/somikyy/sndoctor/cli \
+                                          src/main/java/network/somikyy/sndoctor/report; then
+            echo "::error::core/, cli/ and report/ must not import org.bukkit"
+            exit 1
+          fi
+          echo "layering ok"
+
+      # Gradle builds against the real paper-api, which is worth checking but needs the
+      # network. Non-blocking on purpose: a repo.papermc.io outage is not a code defect,
+      # and the offline job above has already proven the code compiles and behaves.
+      - name: Gradle build (non-blocking)
+        continue-on-error: true
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+
+      - name: Gradle build
+        continue-on-error: true
+        run: gradle build --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SNDoctor-jar
+          path: build/offline/jar/SNDoctor-*.jar

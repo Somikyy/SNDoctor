@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Не хватает Spigot-имени в таблице
+    url: https://github.com/Somikyy/SNDoctor/blob/main/CONTRIBUTING.md
+    about: Одна строка вида SpigotName=MojangName — быстрее прислать pull request, это пять минут
+  - name: Telegram автора
+    url: https://t.me/somikyy
+    about: Вопросы, новые плагины линейки SN, заказ плагина или 3D-модели

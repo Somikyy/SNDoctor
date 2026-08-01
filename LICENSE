@@ -1,0 +1,36 @@
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+SNDoctor - checks installed Minecraft plugins for 26.x compatibility
+Copyright (C) 2026 Somikyy Network
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+-------------------------------------------------------------------------------
+!! ВНИМАНИЕ ПЕРЕД ПУБЛИКАЦИЕЙ !!
+
+Этот файл содержит только уведомление о лицензии, а не её полный текст.
+GPL-3.0 требует, чтобы полный текст лицензии распространялся вместе с программой.
+
+Перед первым публичным релизом замени этот файл целиком на полный текст отсюда:
+
+    https://www.gnu.org/licenses/gpl-3.0.txt
+
+Одной командой:
+
+    curl -sL https://www.gnu.org/licenses/gpl-3.0.txt -o LICENSE
+
+После этого добавь уведомление о копирайте (первые 18 строк этого файла)
+в начало README, а не в LICENSE.
+-------------------------------------------------------------------------------

@@ -1,0 +1,50 @@
+name: release
+
+# Cut a release by pushing a tag:  git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The shipped jar is the offline one: it is built without network access, so the
+      # artifact people download is reproducible from a clean checkout and a JDK alone.
+      - name: Build and self-test (offline)
+        run: bash tools/offline/verify.sh
+
+      # A tag that disagrees with the version compiled into the jar would advertise a
+      # release that does not exist inside the file. Cheaper to catch here than in a
+      # bug report six months later.
+      - name: Tag must match the compiled version
+        run: |
+          VERSION="$(grep -oP 'VERSION = "\K[^"]+' src/main/java/network/somikyy/sndoctor/core/ScanService.java)"
+          TAG="${GITHUB_REF_NAME#v}"
+          if [[ "$VERSION" != "$TAG" ]]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match ScanService.VERSION=$VERSION"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publish the jar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Release may already exist as a draft prepared by hand; that is fine.
+          gh release create "$GITHUB_REF_NAME" \
+             --title "SNDoctor $VERSION" \
+             --notes "Проверка плагинов на совместимость с Minecraft 26.x. Установка и описание — в README репозитория." \
+             || echo "release already exists, uploading into it"
+          gh release upload "$GITHUB_REF_NAME" \
+             "build/offline/jar/SNDoctor-$VERSION.jar" --clobber

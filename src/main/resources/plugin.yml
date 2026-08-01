@@ -1,0 +1,27 @@
+name: SNDoctor
+version: '${version}'
+main: network.somikyy.sndoctor.bukkit.SNDoctorPlugin
+api-version: '1.21'
+# Стоит false честно: сканирование планируется через BukkitScheduler, а он на Folia
+# бросает UnsupportedOperationException. Пока не переписано на региональные планировщики,
+# флаг остаётся выключенным. На Folia пользуйся режимом CLI — он не зависит от сервера.
+folia-supported: false
+description: 'Проверяет плагины из папки plugins на совместимость с Minecraft 26.x.'
+website: 'https://t.me/somikyy'
+authors: [ Somikyy ]
+load: POSTWORLD
+
+commands:
+  sndoctor:
+    description: Проверка установленных плагинов на совместимость с 26.x
+    aliases: [ snd, sndoc, снд ]
+    usage: /sndoctor [scan|full|version|reload] [--lang ru|en]
+    permission: sndoctor.use
+
+permissions:
+  sndoctor.use:
+    description: Запуск проверки и просмотр отчёта
+    default: op
+  sndoctor.reload:
+    description: Перезагрузка config.yml без рестарта сервера
+    default: op

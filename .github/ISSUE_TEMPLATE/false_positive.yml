@@ -1,0 +1,57 @@
+name: SNDoctor соврал про плагин
+description: Вердикт неверный — плагин работает, а помечен красным (или наоборот)
+labels: [false-positive]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Это самый ценный вид отчёта. Одно ложное «не запустится» стоит дороже десяти
+        пропущенных проблем: админ, которому соврали про рабочий плагин, дальше не поверит
+        ни одной строчке отчёта.
+
+  - type: input
+    id: plugin
+    attributes:
+      label: Какой плагин
+      description: Название и версия, а если есть — ссылка на страницу ресурса
+      placeholder: SuperPlugin 3.2.1, spigotmc.org/resources/...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Что не так
+      options:
+        - Помечен красным, но реально работает
+        - Помечен зелёным, но реально не работает
+        - Находка есть, но её объяснение неверное
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Что написал SNDoctor
+      description: Кусок отчёта про этот плагин целиком, вместе с находками
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: server
+    attributes:
+      label: Ядро и версия сервера
+      placeholder: Paper 26.2, сборка 42
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Почему считаешь, что вердикт неверный
+      description: |
+        Например: плагин запускается на этом ядре и работает, вот лог старта.
+        Или наоборот: вот стектрейс, который SNDoctor не предсказал.
+    validations:
+      required: true

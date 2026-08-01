@@ -1,0 +1,15 @@
+# Скрипты сборки и самотеста должны приезжать с LF на любой машине.
+# С CRLF bash спотыкается на первой же строке ($'\r': command not found), а разработка
+# идёт под Windows, где autocrlf по умолчанию включён — без этого файла свежий клон
+# ломает `bash tools/offline/verify.sh` у всех, включая автора.
+*.sh text eol=lf
+
+# YAML читают и сервер, и GitHub Actions — обоим CRLF не нужен.
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Остальное — на усмотрение git, но с нормализацией в LF внутри репозитория.
+* text=auto
+
+*.jar binary
+*.png binary
