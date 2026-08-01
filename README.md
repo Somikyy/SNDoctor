@@ -301,6 +301,10 @@ GPL-3.0-or-later. См. [LICENSE](LICENSE).
 
 ---
 
-Готовый текст для публикации на форумах: [docs/RESOURCE-PAGE.md](docs/RESOURCE-PAGE.md) (читаемый)
-и [docs/RESOURCE-PAGE.bbcode.txt](docs/RESOURCE-PAGE.bbcode.txt) (BBCode для XenForo —
-spigotmc.ru, black-minecraft.ru).
+Готовый текст для публикации на форумах:
+
+- [docs/RESOURCE-PAGE.md](docs/RESOURCE-PAGE.md) — читаемая версия
+- [docs/RESOURCE-PAGE.bbcode.txt](docs/RESOURCE-PAGE.bbcode.txt) — BBCode для XenForo
+  (spigotmc.ru, black-minecraft.ru)
+- [docs/RESOURCE-PAGE.commands.bbcode.txt](docs/RESOURCE-PAGE.commands.bbcode.txt) — команды и
+  права отдельным блоком, для форумов, где под них есть своё поле

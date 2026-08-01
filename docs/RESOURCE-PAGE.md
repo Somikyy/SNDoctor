@@ -3,6 +3,10 @@
 Готовый текст для публикации на spigotmc.ru и black-minecraft.ru.
 Версия для вставки в редактор форума — [RESOURCE-PAGE.bbcode.txt](RESOURCE-PAGE.bbcode.txt).
 
+Команды и права нужны отдельным блоком — spigotmc.ru просит их отдельным полем:
+[RESOURCE-PAGE.commands.bbcode.txt](RESOURCE-PAGE.commands.bbcode.txt). Если пользуешься им,
+удали одноимённые секции из основного описания, чтобы они не шли дважды.
+
 ---
 
 ## Заголовок
