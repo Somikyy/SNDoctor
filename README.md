@@ -29,7 +29,7 @@
 
 ## Установка
 
-1. Скачай `SNDoctor-1.0.0.jar` из [релизов](https://github.com/Somikyy/SNDoctor/releases/latest)
+1. Скачай `SNDoctor-26.8.1.jar` из [релизов](https://github.com/Somikyy/SNDoctor/releases/latest)
 2. Положи в `plugins/`
 3. Перезапусти сервер
 
@@ -72,7 +72,7 @@ java -jar SNDoctor.jar plugins --java 25
 ## Что видно в отчёте
 
 ```
-SNDoctor 1.0.0  —  проверка плагинов на совместимость с Minecraft 26.1+
+SNDoctor 26.8.1  —  проверка плагинов на совместимость с Minecraft 26.1+
 Папка: /srv/mc/plugins
 Найдено jar: 37   Java сервера: 21   Время: 180 ms
 

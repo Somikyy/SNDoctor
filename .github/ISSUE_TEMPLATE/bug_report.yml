@@ -26,7 +26,7 @@ body:
     attributes:
       label: Версия SNDoctor
       description: Вывод /sndoctor version или имя файла jar
-      placeholder: 1.0.0
+      placeholder: 26.8.1
     validations:
       required: true
 

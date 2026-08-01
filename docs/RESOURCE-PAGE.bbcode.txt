@@ -63,7 +63,7 @@
 
 [SIZE=5][B]Как выглядит отчёт[/B][/SIZE]
 
-[CODE]SNDoctor 1.0.0  —  проверка плагинов на совместимость с Minecraft 26.1+
+[CODE]SNDoctor 26.8.1  —  проверка плагинов на совместимость с Minecraft 26.1+
 Папка: /srv/mc/plugins
 Найдено jar: 37   Java сервера: 21   Время: 180 ms
 
@@ -253,7 +253,7 @@ reports:
 [SIZE=5][B]Установка[/B][/SIZE]
 
 [LIST=1]
-[*]Скачай [ICODE]SNDoctor-1.0.0.jar[/ICODE]
+[*]Скачай [ICODE]SNDoctor-26.8.1.jar[/ICODE]
 [*]Положи в папку [ICODE]plugins/[/ICODE]
 [*]Перезапусти сервер
 [/LIST]
@@ -262,7 +262,7 @@ reports:
 
 Для проверки без запуска сервера тот же самый файл запускается напрямую:
 
-[CODE]java -jar SNDoctor-1.0.0.jar plugins --java 25[/CODE]
+[CODE]java -jar SNDoctor-26.8.1.jar plugins --java 25[/CODE]
 
 
 [SIZE=5][B]Исходный код[/B][/SIZE]
