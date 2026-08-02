@@ -430,6 +430,68 @@ expect "UTF-8 output is left alone"             "utf8.untouched=true"
 expect "report written to a cp866 console reads back as Russian" "cli.readable=true"
 expect "  and carries no ANSI escapes when redirected"           "cli.no-ansi=true"
 
+# ---------------------------------------------------------------- message catalogue
+# Texts live in sndoctor/messages-<lang>.txt instead of in Java literals, which means a rule
+# can now be added with no text at all and nothing would complain at compile time - the report
+# would just print the raw key at the reader. So the code is the source of truth here: every id
+# that Analyzer can emit must have all three texts in both languages, and nothing else may sit
+# in the files pretending to be a rule.
+echo "==> message catalogue"
+ANALYZER="$ROOT/src/main/java/network/somikyy/sndoctor/core/Analyzer.java"
+MSG_DIR="$ROOT/src/main/resources/sndoctor"
+
+grep -o 'newFinding("[^"]*"' "$ANALYZER" | sed 's/newFinding("//; s/"$//' | sort -u > "$WORK/rule-ids.txt"
+
+check() { # check <description> <0-or-1 failure flag> [details file]
+  if [[ "$2" -eq 0 ]]; then
+    echo "  ok   $1"
+  else
+    echo "  FAIL $1"
+    [[ -n "${3:-}" ]] && sed 's/^/         /' "$3"
+    FAILED=$((FAILED + 1))
+  fi
+}
+
+for lang in ru en; do
+  : > "$WORK/missing-$lang.txt"
+  while IFS= read -r id; do
+    for part in title why fix; do
+      grep -qF "rule.$id.$part=" "$MSG_DIR/messages-$lang.txt" \
+        || echo "rule.$id.$part" >> "$WORK/missing-$lang.txt"
+    done
+  done < "$WORK/rule-ids.txt"
+  bad=$([[ -s "$WORK/missing-$lang.txt" ]] && echo 1 || echo 0)
+  check "every rule has title/why/fix in $lang ($(wc -l < "$WORK/rule-ids.txt") rules)" \
+        "$bad" "$WORK/missing-$lang.txt"
+done
+
+# Keys nobody asks for are worse than useless: they read as coverage that is not there.
+grep -o '^rule\.[^=]*' "$MSG_DIR/messages-ru.txt" \
+  | sed 's/^rule\.//; s/\.\(title\|why\|fix\)$//' | sort -u > "$WORK/msg-ids.txt"
+comm -13 "$WORK/rule-ids.txt" "$WORK/msg-ids.txt" > "$WORK/orphan-ids.txt"
+check "no texts for rules that do not exist" \
+      "$([[ -s "$WORK/orphan-ids.txt" ]] && echo 1 || echo 0)" "$WORK/orphan-ids.txt"
+
+# A few texts carry {name} holes filled from the jar - the required Java version, how many
+# classes failed to parse. A translator who drops one produces a sentence missing its number,
+# and nothing else would catch it. Both languages must therefore use the same set of holes.
+holes() {
+  grep '^rule\.' "$1" | while IFS= read -r line; do
+    printf '%s\t%s\n' "${line%%=*}" \
+      "$(printf '%s' "${line#*=}" | grep -o '{[a-z]*}' | sort -u | tr -d '\n')"
+  done | sort
+}
+holes "$MSG_DIR/messages-ru.txt" > "$WORK/holes-ru.txt"
+holes "$MSG_DIR/messages-en.txt" > "$WORK/holes-en.txt"
+# Guarded by `if`: a bare diff that finds differences would abort the whole suite under
+# `set -e`, and the assertion it is part of would never get to report anything.
+if diff -u "$WORK/holes-ru.txt" "$WORK/holes-en.txt" > "$WORK/holes.diff" 2>&1; then
+  holes_differ=0
+else
+  holes_differ=1
+fi
+check "ru and en use the same {placeholders}" "$holes_differ" "$WORK/holes.diff"
+
 echo
 if [[ $FAILED -eq 0 ]]; then
   echo "ALL ASSERTIONS PASSED (cli exit code was $EXIT, expected 2)"

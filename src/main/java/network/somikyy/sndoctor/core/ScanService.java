@@ -31,10 +31,12 @@ public final class ScanService {
      * @param serverJava   Java feature version of the target server, or 0 if unknown
      * @param nameOverride optional user-supplied Spigot name table, may be {@code null}
      * @param selfFileName file name of SNDoctor itself, excluded from the scan; may be {@code null}
+     * @param messages     texts shown to the user; {@link Messages#bundled()} for the defaults
      */
-    public static Report scan(File pluginsDir, int serverJava, Path nameOverride, String selfFileName) {
+    public static Report scan(File pluginsDir, int serverJava, Path nameOverride,
+                              String selfFileName, Messages messages) {
         long started = System.currentTimeMillis();
-        Analyzer analyzer = Analyzer.create(nameOverride);
+        Analyzer analyzer = Analyzer.create(nameOverride, messages);
 
         Report report = new Report();
         report.toolVersion = VERSION;

@@ -10,6 +10,7 @@
 package network.somikyy.sndoctor.bukkit;
 
 import network.somikyy.sndoctor.core.Analyzer;
+import network.somikyy.sndoctor.core.Messages;
 import network.somikyy.sndoctor.core.Report;
 import network.somikyy.sndoctor.core.ScanService;
 import network.somikyy.sndoctor.report.JsonRenderer;
@@ -158,12 +159,18 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
         scanning = true;
         try {
             File pluginsDir = getDataFolder().getParentFile();
-            Path override = getDataFolder().toPath().resolve("spigot-names.txt");
+            Path data = getDataFolder().toPath();
+            Path override = data.resolve("spigot-names.txt");
+            // Texts are overridable next to the config, same as the Spigot name table: drop in
+            // messages-ru.txt with only the lines you want changed, nothing gets rebuilt.
+            Messages messages = Messages.load(
+                    data.resolve("messages-ru.txt"), data.resolve("messages-en.txt"));
             Report report = ScanService.scan(
                     pluginsDir,
                     ScanService.currentJavaVersion(),
                     Files.isReadable(override) ? override : null,
-                    selfFileName());
+                    selfFileName(),
+                    messages);
             report.serverVersion = safeServerVersion();
 
             Path reportPath = settings.reportsEnabled ? writeReports(report, settings) : null;

@@ -1,0 +1,170 @@
+# SNDoctor - finding texts, English.
+#
+# Format: key=value, one line per text. Everything after the first '=' is the
+# value, quotes and apostrophes included - nothing needs escaping. Lines
+# starting with '#' are ignored.
+#
+# Keys are built from the rule id, which also appears in the JSON report and in
+# the table in section 4 of docs/SPEC-SNDoctor.md:
+#
+#   rule.<id>.title   what was found
+#   rule.<id>.why     why it breaks
+#   rule.<id>.fix     what to do about it
+#
+# This file ships inside the jar and can be overridden without rebuilding:
+#   plugin mode - plugins/SNDoctor/messages-en.txt
+#   CLI mode    - --messages <file>
+# Overrides may be partial: listed keys replace the bundled ones, the rest are
+# taken from the jar.
+
+
+# nms.spigot-mappings - BLOCKER
+rule.nms.spigot-mappings.title=Spigot-mapped NMS names
+rule.nms.spigot-mappings.why=Since 26.1 Mojang no longer ships obfuscated server jars and Paper dropped its internal remapper. PaperMC: such a plugin "will not work on 26.1, no matter if you are using Paper or not".
+rule.nms.spigot-mappings.fix=Rebuild against Mojang mappings (paperweight-userdev) or replace the plugin.
+
+# nms.legacy-versioned-package - BLOCKER
+rule.nms.legacy-versioned-package.title=Version-stamped NMS package (pre-1.17)
+rule.nms.legacy-versioned-package.why=net.minecraft.server.v1_XX_RX packages disappeared in 1.17. This plugin cannot load on 1.17+ at all.
+rule.nms.legacy-versioned-package.fix=Written for 1.16 or older. Needs a rewrite or a replacement.
+
+
+# craftbukkit.versioned - BLOCKER
+rule.craftbukkit.versioned.title=Version-stamped CraftBukkit package
+rule.craftbukkit.versioned.why=Paper removed org.bukkit.craftbukkit.vX_Y_RZ relocation in 1.20.5. These references throw NoClassDefFoundError on load.
+rule.craftbukkit.versioned.fix=Use the unversioned org.bukkit.craftbukkit.* package or the public API.
+
+
+# nms.version-reflection - WARN
+rule.nms.version-reflection.title=Version detection via vX_Y_RZ string literals
+rule.nms.version-reflection.why=The plugin builds class names from the package version. Relocation is gone since 1.20.5, so this usually throws or silently degrades.
+rule.nms.version-reflection.fix=Drop version-based reflection; use the unversioned package or the API.
+
+
+# craftbukkit.direct - INFO
+rule.craftbukkit.direct.title=Direct CraftBukkit usage
+rule.craftbukkit.direct.why=The plugin touches server internals directly. Not broken by itself, but this is where major version bumps usually hurt.
+rule.craftbukkit.direct.fix=Nothing to do - just test this plugin first after an upgrade.
+
+
+# api.conversation - WARN
+rule.api.conversation.title=Conversation API (deprecated for removal)
+rule.api.conversation.why=Paper 1.21.9/1.21.10: "This API has been unmaintained and largely unused for a long time... Hence, we have decided to deprecate it for removal."
+rule.api.conversation.fix=Migrate to the Dialog API or listen to AsyncChatEvent manually.
+
+# api.metadata - WARN
+rule.api.metadata.title=Metadata API (deprecated)
+rule.api.metadata.why=Paper 1.21.9/1.21.10: "The entity/block entity Metadatable API has been deprecated as it is generally inferior to the PersistentDataContainer API."
+rule.api.metadata.fix=Migrate to PersistentDataContainer.
+
+# api.player-spawn-location-event - WARN
+rule.api.player-spawn-location-event.title=PlayerSpawnLocationEvent (deprecated)
+rule.api.player-spawn-location-event.why=Paper 1.21.9/1.21.10: "Plugins should migrate to the AsyncPlayerSpawnLocationEvent as soon as possible, as listening to the PlayerSpawnLocationEvent has unintended side effects."
+rule.api.player-spawn-location-event.fix=Migrate to AsyncPlayerSpawnLocationEvent.
+
+# api.teleport-flag-entitystate - BREAKING
+rule.api.teleport-flag-entitystate.title=TeleportFlag.EntityState no longer functions
+rule.api.teleport-flag-entitystate.why=Paper 1.21.9/1.21.10: "using TeleportFlag.EntityState no longer has any functionality". The flag is accepted and silently ignored.
+rule.api.teleport-flag-entitystate.fix=Call closeInventory() and eject() manually before teleporting.
+
+# api.gamemode-change-cause - INFO
+rule.api.gamemode-change-cause.title=New GAMEMODE_SWITCHER cause
+rule.api.gamemode-change-cause.why=Paper 1.21.9 introduced GAMEMODE_SWITCHER, replacing COMMAND when a player uses the gamemode switcher. Code checking only COMMAND now misses cases.
+rule.api.gamemode-change-cause.fix=Handle the new cause if the plugin inspects Cause.
+
+# api.legacy-material - WARN
+rule.api.legacy-material.title=Pre-1.13 legacy item API
+rule.api.legacy-material.why=org.bukkit.material, Material.getId() and durability-as-subtype predate the 1.13 flattening; long deprecated and unreliable.
+rule.api.legacy-material.fix=Use named Material, BlockData and Damageable.
+
+
+# meta.not-a-plugin - INFO
+rule.meta.not-a-plugin.title=Not a plugin
+rule.meta.not-a-plugin.why=No plugin.yml or paper-plugin.yml. Usually a library dropped into plugins/ by mistake.
+rule.meta.not-a-plugin.fix=Remove it from plugins/ unless the server loads it explicitly.
+
+# meta.main-class-missing - BLOCKER
+rule.meta.main-class-missing.title=Main class missing from jar
+rule.meta.main-class-missing.why=The descriptor points at a main class that is not inside the archive. The server throws ClassNotFoundException on load.
+rule.meta.main-class-missing.fix=Corrupt or mis-built jar. Re-download from the official source.
+
+# meta.paper-plugin - INFO
+rule.meta.paper-plugin.title=Paper plugin (new loader)
+rule.meta.paper-plugin.why=Uses paper-plugin.yml and Paper's new loader. Some tooling (hot reload in particular) behaves differently with these.
+rule.meta.paper-plugin.fix=Nothing to do.
+
+# meta.no-api-version - WARN
+rule.meta.no-api-version.title=Missing api-version
+rule.meta.no-api-version.why=Without api-version the server treats the plugin as a 1.12-era legacy plugin and enables material conversion. On modern versions this often ends in a refusal to load.
+rule.meta.no-api-version.fix=Author: add api-version to plugin.yml. Admin: check the startup log.
+
+# meta.ancient-api-version - WARN
+rule.meta.ancient-api-version.title=Very old api-version
+rule.meta.ancient-api-version.why=api-version {api} predates the 1.13 flattening.
+rule.meta.ancient-api-version.fix=Look for an update or a replacement.
+
+
+# java.too-new - BLOCKER
+rule.java.too-new.title=Requires Java {java} but the server runs Java {server}
+rule.java.too-new.why=Compiled for a newer Java. Loading fails with UnsupportedClassVersionError.
+rule.java.too-new.fix=Upgrade the server JVM to {java} or use a build for an older Java.
+
+# java.required - INFO
+rule.java.required.title=Requires Java {java}
+rule.java.required.why=Minimum Java version this plugin can run on.
+rule.java.required.fix=Note that Minecraft 26.2 itself requires Java 25.
+
+
+# folia.supported - INFO
+rule.folia.supported.title=Declares Folia support
+rule.folia.supported.why=The descriptor sets folia-supported: true.
+rule.folia.supported.fix=Nothing to do.
+
+
+# meta.runtime-libraries - INFO
+rule.meta.runtime-libraries.title=Downloads dependencies at startup
+rule.meta.runtime-libraries.why=The plugin uses the libraries: section, so the server downloads artifacts at startup. No network means no load.
+rule.meta.runtime-libraries.fix=Relevant on servers without outbound network access.
+
+
+# scan.unreadable-classes - WARN
+rule.scan.unreadable-classes.title=Some classes could not be parsed
+rule.scan.unreadable-classes.why={bad} of {total} classes could not be parsed (obfuscation or a newer class file format). This report is incomplete.
+rule.scan.unreadable-classes.fix=Check manually. Heavy obfuscation in a free plugin is worth a second look.
+
+
+# dep.protocollib - WARN
+rule.dep.protocollib.title=Depends on ProtocolLib
+rule.dep.protocollib.why=ProtocolLib is the ecosystem's most fragile shared dependency: last release 5.4.0 on 2025-08-09, with an open issue about OpenJDK removing final field reflection. If it breaks, everything depending on it breaks.
+rule.dep.protocollib.fix=Verify ProtocolLib compatibility before upgrading; many plugins moved to PacketEvents.
+
+# dep.vault - INFO
+rule.dep.vault.title=Depends on Vault
+rule.dep.vault.why=Vault has not been updated since 2020; its Folia support request has been open since March 2024. VaultUnlocked is the maintained fork.
+rule.dep.vault.fix=Consider VaultUnlocked if you are moving to Folia.
+
+
+# sec.process-execution - SECURITY
+rule.sec.process-execution.title=Starts external processes
+rule.sec.process-execution.why=The plugin calls Runtime.exec or ProcessBuilder. Normal for backup and restart plugins, worth a look anywhere else.
+rule.sec.process-execution.fix=Compare against what the plugin claims to do.
+
+# sec.dynamic-class-loading - SECURITY
+rule.sec.dynamic-class-loading.title=Loads code at runtime
+rule.sec.dynamic-class-loading.why=URLClassLoader or defineClass found. Legitimate library loaders do this - so does remote payload loading.
+rule.sec.dynamic-class-loading.fix=Check whether the loaded code comes from a local file or from the network.
+
+# sec.suspicious-endpoints - SECURITY
+rule.sec.suspicious-endpoints.title=Unusual network endpoints
+rule.sec.suspicious-endpoints.why=String literals point at endpoints plugins rarely use: raw IPs, pastebins, webhooks, tunnels.
+rule.sec.suspicious-endpoints.fix=Check manually. Legitimate plugins talk to their own domain or well-known APIs.
+
+# sec.server-files - SECURITY
+rule.sec.server-files.title=Reads server configuration files
+rule.sec.server-files.why=The plugin references files holding the RCON password, operator list and bans. Normal for admin tooling; not normal alongside network activity.
+rule.sec.server-files.fix=Read together with the network findings: reading plus sending is a bad sign.
+
+# sec.masquerading-package - SECURITY
+rule.sec.masquerading-package.title=Stray classes inside a well-known library package
+rule.sec.masquerading-package.why=Only a couple of classes sit inside a well-known library package. Real shading brings hundreds. This is how foreign code hides - the backdoor found in May 2026 wore org.apache.commons.lang3 as a costume.
+rule.sec.masquerading-package.fix=Decompile these classes before putting the plugin on a live server.

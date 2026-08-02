@@ -9,6 +9,7 @@
  */
 package network.somikyy.sndoctor.cli;
 
+import network.somikyy.sndoctor.core.Messages;
 import network.somikyy.sndoctor.core.Report;
 import network.somikyy.sndoctor.core.ScanService;
 import network.somikyy.sndoctor.report.JsonRenderer;
@@ -41,6 +42,7 @@ public final class SNDoctorCli {
         String jsonOut = null;
         String textOut = null;
         Path names = null;
+        Path messagesFile = null;
         int serverJava = 0;
         boolean ru = true;
         boolean full = false;
@@ -66,6 +68,12 @@ public final class SNDoctorCli {
                     String v = next(args, ++i, err, "--names");
                     if (v != null) {
                         names = Path.of(v);
+                    }
+                }
+                case "--messages" -> {
+                    String v = next(args, ++i, err, "--messages");
+                    if (v != null) {
+                        messagesFile = Path.of(v);
                     }
                 }
                 case "--java" -> {
@@ -110,7 +118,11 @@ public final class SNDoctorCli {
             return;
         }
 
-        Report report = ScanService.scan(pluginsDir, serverJava, names, selfJarName());
+        // --messages overrides the language actually being printed, so it is resolved after the
+        // whole argument list is read: --messages before --lang must work the same as after.
+        Messages messages = Messages.load(ru ? messagesFile : null, ru ? null : messagesFile);
+
+        Report report = ScanService.scan(pluginsDir, serverJava, names, selfJarName(), messages);
 
         String text = new TextRenderer(ru, colour, full).render(report);
         out.print(text);
@@ -174,6 +186,9 @@ public final class SNDoctorCli {
                   --json <файл>   сохранить машинный отчёт
                   --out <файл>    сохранить полный текстовый отчёт
                   --names <файл>  свой список Spigot-имён (дополняет встроенный)
+                  --messages <файл>  свои тексты находок вместо встроенных, формат ключ=значение.
+                                  Переопределяет тот язык, который выбран --lang. Можно указать
+                                  только те ключи, которые правишь — остальные возьмутся из jar.
                   --lang ru|en    язык вывода, по умолчанию ru
                   --full          показывать и справочные находки, и все зелёные плагины
                   --no-color      без ANSI-цветов

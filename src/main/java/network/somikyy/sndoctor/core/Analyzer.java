@@ -67,15 +67,35 @@ public final class Analyzer {
     };
 
     private final Map<String, String> spigotNames;
+    private final Messages messages;
 
-    public Analyzer(Map<String, String> spigotNames) {
+    public Analyzer(Map<String, String> spigotNames, Messages messages) {
         this.spigotNames = spigotNames;
+        this.messages = messages;
+    }
+
+    /**
+     * Builds a finding, taking its three texts from the message catalogue by rule id.
+     *
+     * <p>The id is now the only thing a rule says about its own wording. Everything a user
+     * reads lives in {@code sndoctor/messages-<lang>.txt}, so fixing a translation is a text
+     * edit rather than a rebuild, and adding a language is a new file rather than a patch to
+     * this class.
+     */
+    private Finding newFinding(String id, Severity severity, String... placeholders) {
+        String title = "rule." + id + ".title";
+        String why = "rule." + id + ".why";
+        String fix = "rule." + id + ".fix";
+        return new Finding(id, severity, new Text(
+                messages.get(title, true, placeholders), messages.get(title, false, placeholders),
+                messages.get(why, true, placeholders), messages.get(why, false, placeholders),
+                messages.get(fix, true, placeholders), messages.get(fix, false, placeholders)));
     }
 
     // ------------------------------------------------------------- rule data
 
     /** Loads the bundled name table, optionally merged with a user-supplied override file. */
-    public static Analyzer create(Path override) {
+    public static Analyzer create(Path override, Messages messages) {
         Map<String, String> names = new LinkedHashMap<>();
         try (InputStream in = Analyzer.class.getResourceAsStream("/sndoctor/spigot-names.txt")) {
             if (in != null) {
@@ -91,7 +111,7 @@ public final class Analyzer {
                 // a bad override file must not stop a scan
             }
         }
-        return new Analyzer(names);
+        return new Analyzer(names, messages);
     }
 
     private static void readNames(java.io.Reader reader, Map<String, String> out) throws IOException {
@@ -159,18 +179,7 @@ public final class Analyzer {
     // ---- mapping rules ----------------------------------------------------
 
     private void checkSpigotMappings(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("nms.spigot-mappings", Severity.BLOCKER, new Text(
-                "Spigot-маппинги NMS",
-                "Spigot-mapped NMS names",
-                "С 26.1 Mojang не отдаёт обфусцированные server-jar'ы, а Paper полностью убрал "
-                        + "внутренний ремаппер. Формулировка PaperMC: плагин со Spigot-маппингами "
-                        + "«не будет работать на 26.1, независимо от того, Paper у вас или нет».",
-                "Since 26.1 Mojang no longer ships obfuscated server jars and Paper dropped its "
-                        + "internal remapper. PaperMC: such a plugin \"will not work on 26.1, no "
-                        + "matter if you are using Paper or not\".",
-                "Пересобрать плагин на Mojang-маппингах (paperweight-userdev) или найти замену. "
-                        + "Обновление плагина автором — самый быстрый путь.",
-                "Rebuild against Mojang mappings (paperweight-userdev) or replace the plugin."));
+        Finding finding = newFinding("nms.spigot-mappings", Severity.BLOCKER);
 
         for (String cls : f.referencedClasses) {
             if (!cls.startsWith("net/minecraft/")) {
@@ -188,15 +197,7 @@ public final class Analyzer {
     }
 
     private void checkLegacyNmsPackage(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("nms.legacy-versioned-package", Severity.BLOCKER, new Text(
-                "Версионный пакет NMS (до 1.17)",
-                "Version-stamped NMS package (pre-1.17)",
-                "Пакеты net.minecraft.server.v1_XX_RX исчезли ещё в 1.17. На 1.17+ такой плагин "
-                        + "не загрузится вообще.",
-                "net.minecraft.server.v1_XX_RX packages disappeared in 1.17. This plugin cannot "
-                        + "load on 1.17+ at all.",
-                "Плагин рассчитан на 1.16 и старше. Нужна принципиально новая версия или замена.",
-                "Written for 1.16 or older. Needs a rewrite or a replacement."));
+        Finding finding = newFinding("nms.legacy-versioned-package", Severity.BLOCKER);
         for (String cls : f.referencedClasses) {
             if (LEGACY_NMS_PACKAGE.matcher(cls).matches()) {
                 finding.evidence(packageOf(cls));
@@ -208,15 +209,7 @@ public final class Analyzer {
     }
 
     private void checkVersionedCraftBukkit(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("craftbukkit.versioned", Severity.BLOCKER, new Text(
-                "Версионный пакет CraftBukkit",
-                "Version-stamped CraftBukkit package",
-                "Paper убрал релокацию org.bukkit.craftbukkit.vX_Y_RZ ещё в 1.20.5. Такие ссылки "
-                        + "приводят к NoClassDefFoundError при загрузке.",
-                "Paper removed org.bukkit.craftbukkit.vX_Y_RZ relocation in 1.20.5. These "
-                        + "references throw NoClassDefFoundError on load.",
-                "Заменить на неверсионные org.bukkit.craftbukkit.* или на публичный API.",
-                "Use the unversioned org.bukkit.craftbukkit.* package or the public API."));
+        Finding finding = newFinding("craftbukkit.versioned", Severity.BLOCKER);
         for (String cls : f.referencedClasses) {
             if (VERSIONED_CRAFTBUKKIT.matcher(cls).matches()) {
                 finding.evidence(packageOf(cls));
@@ -228,15 +221,7 @@ public final class Analyzer {
     }
 
     private void checkVersionReflection(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("nms.version-reflection", Severity.WARN, new Text(
-                "Определение версии через vX_Y_RZ в строках",
-                "Version detection via vX_Y_RZ string literals",
-                "Плагин собирает имя класса из версии пакета. На 1.20.5+ релокации больше нет, "
-                        + "и такой код обычно падает или молча уходит в ветку «неподдерживаемая версия».",
-                "The plugin builds class names from the package version. Relocation is gone since "
-                        + "1.20.5, so this usually throws or silently degrades.",
-                "Убрать версионную рефлексию. Работать с неверсионным CraftBukkit или с API.",
-                "Drop version-based reflection; use the unversioned package or the API."));
+        Finding finding = newFinding("nms.version-reflection", Severity.WARN);
         for (String s : f.stringConstants) {
             if (VERSION_TOKEN.matcher(s).matches()) {
                 finding.evidence(trim(s, 60));
@@ -248,15 +233,7 @@ public final class Analyzer {
     }
 
     private void checkUnversionedCraftBukkit(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("craftbukkit.direct", Severity.INFO, new Text(
-                "Прямое обращение к CraftBukkit",
-                "Direct CraftBukkit usage",
-                "Плагин использует внутренности сервера напрямую. Само по себе это не поломка, "
-                        + "но такие места чаще всего ломаются при смене мажорной версии.",
-                "The plugin touches server internals directly. Not broken by itself, but this is "
-                        + "where major version bumps usually hurt.",
-                "Ничего делать не нужно — просто проверь этот плагин первым после обновления.",
-                "Nothing to do - just test this plugin first after an upgrade."));
+        Finding finding = newFinding("craftbukkit.direct", Severity.INFO);
         for (String cls : f.referencedClasses) {
             if (cls.startsWith("org/bukkit/craftbukkit/")
                     && !VERSIONED_CRAFTBUKKIT.matcher(cls).matches()) {
@@ -271,16 +248,7 @@ public final class Analyzer {
     // ---- API deprecation / removal rules ---------------------------------
 
     private void checkConversationApi(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("api.conversation", Severity.WARN, new Text(
-                "Conversation API (deprecated for removal)",
-                "Conversation API (deprecated for removal)",
-                "Paper 1.21.9/1.21.10: «This API has been unmaintained and largely unused for a "
-                        + "long time... Hence, we have decided to deprecate it for removal.» "
-                        + "Пакет org.bukkit.conversations будет удалён.",
-                "Paper 1.21.9/1.21.10: \"This API has been unmaintained and largely unused for a "
-                        + "long time... Hence, we have decided to deprecate it for removal.\"",
-                "Перейти на Dialog API или слушать AsyncChatEvent вручную.",
-                "Migrate to the Dialog API or listen to AsyncChatEvent manually."));
+        Finding finding = newFinding("api.conversation", Severity.WARN);
         for (String cls : f.referencedClasses) {
             if (cls.startsWith("org/bukkit/conversations/")) {
                 finding.evidence(simpleName(cls));
@@ -292,16 +260,7 @@ public final class Analyzer {
     }
 
     private void checkMetadataApi(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("api.metadata", Severity.WARN, new Text(
-                "Metadata API (deprecated)",
-                "Metadata API (deprecated)",
-                "Paper 1.21.9/1.21.10: «The entity/block entity Metadatable API has been deprecated "
-                        + "as it is generally inferior to the PersistentDataContainer API.» "
-                        + "Исторически этот API — источник утечек памяти.",
-                "Paper 1.21.9/1.21.10: \"The entity/block entity Metadatable API has been "
-                        + "deprecated as it is generally inferior to the PersistentDataContainer API.\"",
-                "Перейти на PersistentDataContainer.",
-                "Migrate to PersistentDataContainer."));
+        Finding finding = newFinding("api.metadata", Severity.WARN);
         for (String cls : f.referencedClasses) {
             if (cls.startsWith("org/bukkit/metadata/")) {
                 finding.evidence(simpleName(cls));
@@ -320,33 +279,13 @@ public final class Analyzer {
 
     private void checkPlayerSpawnLocationEvent(JarFacts f, List<Finding> out) {
         if (f.referencedClasses.contains("org/bukkit/event/player/PlayerSpawnLocationEvent")) {
-            out.add(new Finding("api.player-spawn-location-event", Severity.WARN, new Text(
-                    "PlayerSpawnLocationEvent (deprecated)",
-                    "PlayerSpawnLocationEvent (deprecated)",
-                    "Paper 1.21.9/1.21.10: «Plugins should migrate to the "
-                            + "AsyncPlayerSpawnLocationEvent as soon as possible, as listening to the "
-                            + "PlayerSpawnLocationEvent has unintended side effects.» Загрузка спавна "
-                            + "переехала в configuration-фазу.",
-                    "Paper 1.21.9/1.21.10: \"Plugins should migrate to the "
-                            + "AsyncPlayerSpawnLocationEvent as soon as possible, as listening to the "
-                            + "PlayerSpawnLocationEvent has unintended side effects.\"",
-                    "Перейти на AsyncPlayerSpawnLocationEvent.",
-                    "Migrate to AsyncPlayerSpawnLocationEvent."))
+            out.add(newFinding("api.player-spawn-location-event", Severity.WARN)
                     .evidence("PlayerSpawnLocationEvent"));
         }
     }
 
     private void checkTeleportFlag(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("api.teleport-flag-entitystate", Severity.BREAKING, new Text(
-                "TeleportFlag.EntityState больше не работает",
-                "TeleportFlag.EntityState no longer functions",
-                "Paper 1.21.9/1.21.10: «using TeleportFlag.EntityState no longer has any "
-                        + "functionality». Флаг принимается, но ничего не делает — это тихая поломка, "
-                        + "которую не видно в логах.",
-                "Paper 1.21.9/1.21.10: \"using TeleportFlag.EntityState no longer has any "
-                        + "functionality\". The flag is accepted and silently ignored.",
-                "Закрывать инвентарь и высаживать пассажиров вручную перед телепортом.",
-                "Call closeInventory() and eject() manually before teleporting."));
+        Finding finding = newFinding("api.teleport-flag-entitystate", Severity.BREAKING);
         for (String cls : f.referencedClasses) {
             if (cls.startsWith("io/papermc/paper/entity/TeleportFlag$EntityState")) {
                 finding.evidence("TeleportFlag.EntityState");
@@ -366,30 +305,13 @@ public final class Analyzer {
         boolean uses = f.referencedClasses.stream()
                 .anyMatch(c -> c.startsWith("org/bukkit/event/player/PlayerGameModeChangeEvent"));
         if (uses) {
-            out.add(new Finding("api.gamemode-change-cause", Severity.INFO, new Text(
-                    "Новая причина GAMEMODE_SWITCHER",
-                    "New GAMEMODE_SWITCHER cause",
-                    "Paper 1.21.9 добавил причину GAMEMODE_SWITCHER в PlayerGameModeChangeEvent, "
-                            + "заменив ей COMMAND при смене режима через переключатель. Код, который "
-                            + "проверяет только COMMAND, теперь пропускает часть случаев.",
-                    "Paper 1.21.9 introduced GAMEMODE_SWITCHER, replacing COMMAND when a player uses "
-                            + "the gamemode switcher. Code checking only COMMAND now misses cases.",
-                    "Проверить, обрабатывается ли новая причина, если плагин смотрит на Cause.",
-                    "Handle the new cause if the plugin inspects Cause."))
+            out.add(newFinding("api.gamemode-change-cause", Severity.INFO)
                     .evidence("PlayerGameModeChangeEvent"));
         }
     }
 
     private void checkLegacyMaterial(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("api.legacy-material", Severity.WARN, new Text(
-                "Легаси-API предметов (до 1.13)",
-                "Pre-1.13 legacy item API",
-                "org.bukkit.material, Material.getId() и durability как подтип — наследие «до "
-                        + "флаттенинга» 1.13. Работает нестабильно и давно депрекейтнуто.",
-                "org.bukkit.material, Material.getId() and durability-as-subtype predate the 1.13 "
-                        + "flattening; long deprecated and unreliable.",
-                "Перейти на Material по имени, BlockData и Damageable.",
-                "Use named Material, BlockData and Damageable."));
+        Finding finding = newFinding("api.legacy-material", Severity.WARN);
         for (String cls : f.referencedClasses) {
             if (cls.startsWith("org/bukkit/material/")) {
                 finding.evidence(simpleName(cls));
@@ -410,15 +332,7 @@ public final class Analyzer {
 
     private void checkDescriptor(JarFacts f, List<Finding> out) {
         if (!f.hasPluginYml && !f.hasPaperPluginYml) {
-            out.add(new Finding("meta.not-a-plugin", Severity.INFO, new Text(
-                    "Это не плагин",
-                    "Not a plugin",
-                    "В jar нет plugin.yml и paper-plugin.yml. Обычно это библиотека, положенная в "
-                            + "plugins/ по ошибке, или файл, который туда попал случайно.",
-                    "No plugin.yml or paper-plugin.yml. Usually a library dropped into plugins/ by "
-                            + "mistake.",
-                    "Убрать из plugins/, если это не зависимость, которую сервер грузит явно.",
-                    "Remove it from plugins/ unless the server loads it explicitly."))
+            out.add(newFinding("meta.not-a-plugin", Severity.INFO)
                     .evidence(f.fileName));
             return;
         }
@@ -426,57 +340,25 @@ public final class Analyzer {
         if (!f.mainClass.isEmpty()) {
             String internal = f.mainClass.replace('.', '/');
             if (!f.ownClasses.contains(internal)) {
-                out.add(new Finding("meta.main-class-missing", Severity.BLOCKER, new Text(
-                        "Главный класс не найден в jar",
-                        "Main class missing from jar",
-                        "В описании указан main, которого нет внутри архива. Сервер упадёт с "
-                                + "ClassNotFoundException при загрузке.",
-                        "The descriptor points at a main class that is not inside the archive. The "
-                                + "server throws ClassNotFoundException on load.",
-                        "Файл повреждён или собран неправильно. Скачать заново из официального источника.",
-                        "Corrupt or mis-built jar. Re-download from the official source."))
+                out.add(newFinding("meta.main-class-missing", Severity.BLOCKER)
                         .evidence(f.mainClass));
             }
         }
 
         if (f.hasPaperPluginYml) {
-            out.add(new Finding("meta.paper-plugin", Severity.INFO, new Text(
-                    "Paper-плагин (новый загрузчик)",
-                    "Paper plugin (new loader)",
-                    "Использует paper-plugin.yml и новый загрузчик Paper. Часть инструментов "
-                            + "(например hot-reload) с такими плагинами работает иначе.",
-                    "Uses paper-plugin.yml and Paper's new loader. Some tooling (hot reload in "
-                            + "particular) behaves differently with these.",
-                    "Ничего делать не нужно.",
-                    "Nothing to do."))
+            out.add(newFinding("meta.paper-plugin", Severity.INFO)
                     .evidence("paper-plugin.yml"));
             return; // api-version rules below apply to Bukkit descriptors
         }
 
         if (f.apiVersion.isEmpty()) {
-            out.add(new Finding("meta.no-api-version", Severity.WARN, new Text(
-                    "Не указан api-version",
-                    "Missing api-version",
-                    "Без api-version сервер считает плагин legacy-плагином эпохи 1.12 и включает "
-                            + "конвертацию материалов. На современных версиях это регулярно "
-                            + "заканчивается отказом загрузки.",
-                    "Without api-version the server treats the plugin as a 1.12-era legacy plugin "
-                            + "and enables material conversion. On modern versions this often ends "
-                            + "in a refusal to load.",
-                    "Автору — добавить api-version в plugin.yml. Админу — проверить загрузку в логе.",
-                    "Author: add api-version to plugin.yml. Admin: check the startup log."))
+            out.add(newFinding("meta.no-api-version", Severity.WARN)
                     .evidence("plugin.yml"));
         } else {
             double v = parseApiVersion(f.apiVersion);
             if (v > 0 && v < 1.13) {
-                out.add(new Finding("meta.ancient-api-version", Severity.WARN, new Text(
-                        "Очень старый api-version",
-                        "Very old api-version",
-                        "api-version " + f.apiVersion + " — до флаттенинга 1.13. Плагин почти "
-                                + "наверняка написан под другой набор материалов.",
-                        "api-version " + f.apiVersion + " predates the 1.13 flattening.",
-                        "Ищи обновление или замену.",
-                        "Look for an update or a replacement."))
+                out.add(newFinding("meta.ancient-api-version", Severity.WARN,
+                        "api", f.apiVersion)
                         .evidence("api-version: " + f.apiVersion));
             }
         }
@@ -488,52 +370,26 @@ public final class Analyzer {
             return;
         }
         if (serverJava > 0 && required > serverJava) {
-            out.add(new Finding("java.too-new", Severity.BLOCKER, new Text(
-                    "Требует Java " + required + ", а сервер на Java " + serverJava,
-                    "Requires Java " + required + " but the server runs Java " + serverJava,
-                    "Плагин скомпилирован под более новую Java. Загрузка упадёт с "
-                            + "UnsupportedClassVersionError.",
-                    "Compiled for a newer Java. Loading fails with UnsupportedClassVersionError.",
-                    "Обновить Java на сервере до " + required + " или взять сборку плагина под "
-                            + "старую Java.",
-                    "Upgrade the server JVM to " + required + " or use a build for an older Java."))
+            out.add(newFinding("java.too-new", Severity.BLOCKER,
+                    "java", String.valueOf(required), "server", String.valueOf(serverJava))
                     .evidence("class major " + f.maxClassMajor));
         } else {
-            out.add(new Finding("java.required", Severity.INFO, new Text(
-                    "Требует Java " + required,
-                    "Requires Java " + required,
-                    "Минимальная версия Java, на которой этот плагин запустится.",
-                    "Minimum Java version this plugin can run on.",
-                    "Учитывай при выборе версии сервера: Minecraft 26.2 требует Java 25.",
-                    "Note that Minecraft 26.2 itself requires Java 25."))
+            out.add(newFinding("java.required", Severity.INFO,
+                    "java", String.valueOf(required))
                     .evidence("class major " + f.maxClassMajor));
         }
     }
 
     private void checkFolia(JarFacts f, List<Finding> out) {
         if (f.foliaSupported) {
-            out.add(new Finding("folia.supported", Severity.INFO, new Text(
-                    "Заявлена поддержка Folia",
-                    "Declares Folia support",
-                    "В описании стоит folia-supported: true.",
-                    "The descriptor sets folia-supported: true.",
-                    "Ничего делать не нужно.",
-                    "Nothing to do."))
+            out.add(newFinding("folia.supported", Severity.INFO)
                     .evidence("folia-supported: true"));
         }
     }
 
     private void checkRuntimeLibraries(JarFacts f, List<Finding> out) {
         if (!f.libraries.isEmpty()) {
-            Finding finding = new Finding("meta.runtime-libraries", Severity.INFO, new Text(
-                    "Скачивает зависимости при старте",
-                    "Downloads dependencies at startup",
-                    "Плагин использует секцию libraries: сервер тянет эти артефакты из интернета при "
-                            + "запуске. Без сети или при недоступности репозитория плагин не загрузится.",
-                    "The plugin uses the libraries: section, so the server downloads artifacts at "
-                            + "startup. No network means no load.",
-                    "Учитывай на серверах без внешнего доступа.",
-                    "Relevant on servers without outbound network access."));
+            Finding finding = newFinding("meta.runtime-libraries", Severity.INFO);
             for (String lib : f.libraries) {
                 finding.evidence(lib);
             }
@@ -543,17 +399,9 @@ public final class Analyzer {
 
     private void checkUnreadableClasses(JarFacts f, List<Finding> out) {
         if (f.unreadableClasses > 0) {
-            out.add(new Finding("scan.unreadable-classes", Severity.WARN, new Text(
-                    "Часть классов не читается",
-                    "Some classes could not be parsed",
-                    f.unreadableClasses + " из " + f.classCount + " классов не удалось разобрать. "
-                            + "Обычно это обфускация или более новый формат class-файла — отчёт по "
-                            + "этому плагину неполный.",
-                    f.unreadableClasses + " of " + f.classCount + " classes could not be parsed "
-                            + "(obfuscation or a newer class file format). This report is incomplete.",
-                    "Проверить плагин вручную. Тяжёлая обфускация в бесплатном плагине — повод "
-                            + "насторожиться.",
-                    "Check manually. Heavy obfuscation in a free plugin is worth a second look."))
+            out.add(newFinding("scan.unreadable-classes", Severity.WARN,
+                    "bad", String.valueOf(f.unreadableClasses),
+                    "total", String.valueOf(f.classCount))
                     .evidence(f.unreadableClasses + " class(es)"));
         }
     }
@@ -564,19 +412,7 @@ public final class Analyzer {
         boolean referenced = f.referencedClasses.stream().anyMatch(c -> c.startsWith("com/comphenix/protocol/"));
         boolean declared = containsIgnoreCase(f.depend, "ProtocolLib") || containsIgnoreCase(f.softDepend, "ProtocolLib");
         if (referenced || declared) {
-            Finding finding = new Finding("dep.protocollib", Severity.WARN, new Text(
-                    "Зависит от ProtocolLib",
-                    "Depends on ProtocolLib",
-                    "ProtocolLib — самая хрупкая общая зависимость экосистемы: последний релиз 5.4.0 "
-                            + "от 9 августа 2025, в трекере открыт вопрос о том, что OpenJDK планирует "
-                            + "закрыть модификацию final-полей через рефлексию. Если ProtocolLib "
-                            + "отвалится на новой версии, отвалятся все зависящие от него плагины.",
-                    "ProtocolLib is the ecosystem's most fragile shared dependency: last release "
-                            + "5.4.0 on 2025-08-09, with an open issue about OpenJDK removing final "
-                            + "field reflection. If it breaks, everything depending on it breaks.",
-                    "Проверить совместимость ProtocolLib с целевой версией до апгрейда. Многие "
-                            + "плагины уже переехали на PacketEvents.",
-                    "Verify ProtocolLib compatibility before upgrading; many plugins moved to PacketEvents."));
+            Finding finding = newFinding("dep.protocollib", Severity.WARN);
             finding.evidence(declared ? "объявлен в plugin.yml" : "используется в коде");
             out.add(finding);
         }
@@ -586,15 +422,7 @@ public final class Analyzer {
         boolean referenced = f.referencedClasses.stream().anyMatch(c -> c.startsWith("net/milkbowl/vault/"));
         boolean declared = containsIgnoreCase(f.depend, "Vault") || containsIgnoreCase(f.softDepend, "Vault");
         if (referenced || declared) {
-            out.add(new Finding("dep.vault", Severity.INFO, new Text(
-                    "Зависит от Vault",
-                    "Depends on Vault",
-                    "Vault не обновлялся с 2020 года, запрос на поддержку Folia в его трекере висит "
-                            + "с марта 2024. Существует активный форк VaultUnlocked.",
-                    "Vault has not been updated since 2020; its Folia support request has been open "
-                            + "since March 2024. VaultUnlocked is the maintained fork.",
-                    "Если планируешь Folia — посмотри в сторону VaultUnlocked.",
-                    "Consider VaultUnlocked if you are moving to Folia."))
+            out.add(newFinding("dep.vault", Severity.INFO)
                     .evidence(declared ? "объявлен в plugin.yml" : "используется в коде"));
         }
     }
@@ -604,15 +432,7 @@ public final class Analyzer {
     // not "this is malware".
 
     private void checkRuntimeExec(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("sec.process-execution", Severity.SECURITY, new Text(
-                "Запускает внешние процессы",
-                "Starts external processes",
-                "Плагин вызывает Runtime.exec или ProcessBuilder. Для бэкап- и рестарт-плагинов это "
-                        + "нормально, для всего остального — повод посмотреть, что именно запускается.",
-                "The plugin calls Runtime.exec or ProcessBuilder. Normal for backup and restart "
-                        + "plugins, worth a look anywhere else.",
-                "Сверить с назначением плагина. Если это чат-плагин — вопросов больше, чем ответов.",
-                "Compare against what the plugin claims to do."));
+        Finding finding = newFinding("sec.process-execution", Severity.SECURITY);
         for (String ref : f.memberRefs) {
             if (ref.equals("java/lang/Runtime#exec") || ref.startsWith("java/lang/ProcessBuilder#")) {
                 finding.evidence(ref);
@@ -624,15 +444,7 @@ public final class Analyzer {
     }
 
     private void checkDynamicClassLoading(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("sec.dynamic-class-loading", Severity.SECURITY, new Text(
-                "Загружает код во время работы",
-                "Loads code at runtime",
-                "Найдены URLClassLoader или defineClass. Так работают легитимные загрузчики "
-                        + "библиотек — и так же работает подгрузка полезной нагрузки извне.",
-                "URLClassLoader or defineClass found. Legitimate library loaders do this - so does "
-                        + "remote payload loading.",
-                "Посмотреть, откуда берётся загружаемый код: из локального файла или из сети.",
-                "Check whether the loaded code comes from a local file or from the network."));
+        Finding finding = newFinding("sec.dynamic-class-loading", Severity.SECURITY);
         for (String cls : f.referencedClasses) {
             if (cls.equals("java/net/URLClassLoader")) {
                 finding.evidence("URLClassLoader");
@@ -649,15 +461,7 @@ public final class Analyzer {
     }
 
     private void checkSuspiciousUrls(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("sec.suspicious-endpoints", Severity.SECURITY, new Text(
-                "Обращения к нетипичным адресам",
-                "Unusual network endpoints",
-                "В строках найдены адреса, по которым обычно не ходят плагины: сырые IP, "
-                        + "пейстбины, вебхуки, туннели.",
-                "String literals point at endpoints plugins rarely use: raw IPs, pastebins, "
-                        + "webhooks, tunnels.",
-                "Проверить вручную. Легитимные плагины ходят на свои домены и на известные API.",
-                "Check manually. Legitimate plugins talk to their own domain or well-known APIs."));
+        Finding finding = newFinding("sec.suspicious-endpoints", Severity.SECURITY);
         for (String s : f.stringConstants) {
             String lower = s.toLowerCase();
             if (RAW_IP_URL.matcher(s).matches()) {
@@ -677,15 +481,7 @@ public final class Analyzer {
     }
 
     private void checkServerSecrets(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("sec.server-files", Severity.SECURITY, new Text(
-                "Читает служебные файлы сервера",
-                "Reads server configuration files",
-                "Плагин упоминает файлы, где лежат пароль RCON, список операторов и баны. Для "
-                        + "админ-плагинов это нормально; в сочетании с сетевой активностью — нет.",
-                "The plugin references files holding the RCON password, operator list and bans. "
-                        + "Normal for admin tooling; not normal alongside network activity.",
-                "Смотреть вместе с находками по сети: чтение + отправка наружу — плохой признак.",
-                "Read together with the network findings: reading plus sending is a bad sign."));
+        Finding finding = newFinding("sec.server-files", Severity.SECURITY);
         for (String s : f.stringConstants) {
             for (String marker : SERVER_SECRET_MARKERS) {
                 if (s.contains(marker)) {
@@ -708,17 +504,7 @@ public final class Analyzer {
      * backdoor the Russian admin community dissected in May 2026.
      */
     private void checkMasqueradingClasses(JarFacts f, List<Finding> out) {
-        Finding finding = new Finding("sec.masquerading-package", Severity.SECURITY, new Text(
-                "Одиночные классы в чужом пакете",
-                "Stray classes inside a well-known library package",
-                "В пакете известной библиотеки лежит всего несколько классов. При нормальном "
-                        + "шейдинге их сотни. Так маскируют посторонний код: именно в таком виде в "
-                        + "мае 2026 нашли бэкдор, притворявшийся org.apache.commons.lang3.",
-                "Only a couple of classes sit inside a well-known library package. Real shading "
-                        + "brings hundreds. This is how foreign code hides - the backdoor found in "
-                        + "May 2026 wore org.apache.commons.lang3 as a costume.",
-                "Открыть эти классы декомпилятором до того, как ставить плагин на живой сервер.",
-                "Decompile these classes before putting the plugin on a live server."));
+        Finding finding = newFinding("sec.masquerading-package", Severity.SECURITY);
 
         for (String prefix : KNOWN_LIBRARY_PREFIXES) {
             List<String> hits = new ArrayList<>();
