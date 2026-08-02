@@ -15,25 +15,17 @@ import java.util.List;
 /** The result of one scan: every plugin, its findings, and its verdict. */
 public final class Report {
 
-    /** Traffic-light verdict for a single plugin. */
+    /**
+     * Traffic-light verdict for a single plugin.
+     *
+     * <p>Deliberately carries no display text. It used to hold a label and a hint in both
+     * languages and nothing ever read any of the four - the renderer has always built its own
+     * wording. Dead strings that look alive are worse than no strings: the next person to
+     * reword a verdict would have edited these and watched the report ignore it. Labels live
+     * under {@code ui.count.*} and {@code ui.section.*} in the message files.
+     */
     public enum Verdict {
-        RED("КРАСНЫЙ", "RED", "не запустится на " + Analyzer.TARGET, "will not run on " + Analyzer.TARGET),
-        YELLOW("ЖЁЛТЫЙ", "YELLOW", "запустится, но что-то сломано или устарело",
-                "loads, but something is broken or deprecated"),
-        GREEN("ЗЕЛЁНЫЙ", "GREEN", "проблем не найдено", "no problems found"),
-        SKIPPED("ПРОПУЩЕН", "SKIPPED", "не удалось прочитать файл", "file could not be read");
-
-        public final String ru;
-        public final String en;
-        public final String hintRu;
-        public final String hintEn;
-
-        Verdict(String ru, String en, String hintRu, String hintEn) {
-            this.ru = ru;
-            this.en = en;
-            this.hintRu = hintRu;
-            this.hintEn = hintEn;
-        }
+        RED, YELLOW, GREEN, SKIPPED
     }
 
     /** One plugin's result. */

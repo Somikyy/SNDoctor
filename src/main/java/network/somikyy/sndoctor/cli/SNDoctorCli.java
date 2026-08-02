@@ -124,11 +124,11 @@ public final class SNDoctorCli {
 
         Report report = ScanService.scan(pluginsDir, serverJava, names, selfJarName(), messages);
 
-        String text = new TextRenderer(ru, colour, full).render(report);
+        String text = new TextRenderer(ru, colour, full, messages).render(report);
         out.print(text);
 
         if (textOut != null) {
-            writeFile(Path.of(textOut), new TextRenderer(ru, false, true).render(report), err);
+            writeFile(Path.of(textOut), new TextRenderer(ru, false, true, messages).render(report), err);
             out.println((ru ? "Полный отчёт: " : "Full report: ") + textOut);
         }
         if (jsonOut != null) {

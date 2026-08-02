@@ -168,3 +168,25 @@ rule.sec.server-files.fix=Read together with the network findings: reading plus 
 rule.sec.masquerading-package.title=Stray classes inside a well-known library package
 rule.sec.masquerading-package.why=Only a couple of classes sit inside a well-known library package. Real shading brings hundreds. This is how foreign code hides - the backdoor found in May 2026 wore org.apache.commons.lang3 as a costume.
 rule.sec.masquerading-package.fix=Decompile these classes before putting the plugin on a live server.
+
+
+# --------------------------------------------------------------------------
+# Report labels. Spacing and indentation are the renderer's job - only wording here.
+# --------------------------------------------------------------------------
+ui.header=plugin compatibility check for Minecraft
+ui.directory=Directory:
+ui.jars-found=Jars found:
+ui.server-java=Server Java:
+ui.took=Took:
+ui.count.red=RED
+ui.count.yellow=YELLOW
+ui.count.green=GREEN
+ui.count.skipped=SKIPPED
+ui.count.review=REVIEW
+ui.section.red=RED — will not run
+ui.section.yellow=YELLOW — loads with problems
+ui.section.skipped=SKIPPED
+ui.section.green=GREEN — clean
+ui.section.security=NEEDS A HUMAN LOOK — not a verdict, just worth checking
+ui.error=error:
+ui.footer=SNDoctor's rules are backed by primary sources (PaperMC announcements, javadocs, jar contents). Unverified claims are deliberately excluded.

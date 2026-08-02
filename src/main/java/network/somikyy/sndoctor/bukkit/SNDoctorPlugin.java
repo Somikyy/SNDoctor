@@ -173,7 +173,7 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
                     messages);
             report.serverVersion = safeServerVersion();
 
-            Path reportPath = settings.reportsEnabled ? writeReports(report, settings) : null;
+            Path reportPath = settings.reportsEnabled ? writeReports(report, settings, messages) : null;
             List<String> summary = summarise(report, settings.russian);
 
             if (sender == null) {
@@ -189,7 +189,7 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
                 return;
             }
 
-            String full = new TextRenderer(settings.russian, false, settings.full).render(report);
+            String full = new TextRenderer(settings.russian, false, settings.full, messages).render(report);
             getServer().getScheduler().runTask(this, () -> {
                 for (String line : summary) {
                     sender.sendMessage(line);
@@ -241,13 +241,13 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
         return lines;
     }
 
-    private Path writeReports(Report report, SNDoctorConfig settings) {
+    private Path writeReports(Report report, SNDoctorConfig settings, Messages messages) {
         try {
             Path dir = getDataFolder().toPath().resolve("reports");
             Files.createDirectories(dir);
             String stamp = LocalDateTime.now().format(STAMP);
             Path text = dir.resolve("report-" + stamp + ".txt");
-            Files.writeString(text, new TextRenderer(settings.russian, false, true).render(report),
+            Files.writeString(text, new TextRenderer(settings.russian, false, true, messages).render(report),
                     StandardCharsets.UTF_8);
             if (settings.reportsJson) {
                 Files.writeString(dir.resolve("report-" + stamp + ".json"),

@@ -10,6 +10,7 @@
 package network.somikyy.sndoctor.report;
 
 import network.somikyy.sndoctor.core.Finding;
+import network.somikyy.sndoctor.core.Messages;
 import network.somikyy.sndoctor.core.Report;
 import network.somikyy.sndoctor.core.Report.Verdict;
 
@@ -35,58 +36,68 @@ public final class TextRenderer {
     private final boolean ru;
     private final boolean colour;
     private final boolean full;
+    private final Messages messages;
 
-    public TextRenderer(boolean ru, boolean colour, boolean full) {
+    public TextRenderer(boolean ru, boolean colour, boolean full, Messages messages) {
         this.ru = ru;
         this.colour = colour;
         this.full = full;
+        this.messages = messages;
+    }
+
+    /**
+     * A label in the selected language.
+     *
+     * <p>Only wording comes from the catalogue. Spacing, indentation and where the colon sits
+     * stay here, so no message value has to end in an invisible space to line the report up -
+     * whitespace nobody can see is the first thing a hand-edited translation loses.
+     */
+    private String m(String key) {
+        return messages.get(key, ru);
     }
 
     public String render(Report report) {
         StringBuilder sb = new StringBuilder(8192);
 
         sb.append(c(BOLD)).append("SNDoctor ").append(report.toolVersion).append(c(RESET))
-                .append(ru ? "  —  проверка плагинов на совместимость с Minecraft "
-                        : "  —  plugin compatibility check for Minecraft ")
+                .append("  —  ").append(m("ui.header")).append(' ')
                 .append(network.somikyy.sndoctor.core.Analyzer.TARGET).append('\n');
 
         sb.append(c(GREY));
-        sb.append(ru ? "Папка: " : "Directory: ").append(report.scannedPath).append('\n');
-        sb.append(ru ? "Найдено jar: " : "Jars found: ").append(report.results.size());
+        sb.append(m("ui.directory")).append(' ').append(report.scannedPath).append('\n');
+        sb.append(m("ui.jars-found")).append(' ').append(report.results.size());
         if (report.serverJava > 0) {
-            sb.append(ru ? "   Java сервера: " : "   Server Java: ").append(report.serverJava);
+            sb.append("   ").append(m("ui.server-java")).append(' ').append(report.serverJava);
         }
         if (!report.serverVersion.isEmpty()) {
             sb.append("   ").append(report.serverVersion);
         }
-        sb.append(ru ? "   Время: " : "   Took: ").append(report.durationMillis).append(" ms");
+        sb.append("   ").append(m("ui.took")).append(' ')
+                .append(report.durationMillis).append(" ms");
         sb.append(c(RESET)).append("\n\n");
 
         // ---- summary line ---------------------------------------------------
-        sb.append(pill(RED, report.count(Verdict.RED), ru ? "КРАСНЫЙ" : "RED")).append("   ");
-        sb.append(pill(YELLOW, report.count(Verdict.YELLOW), ru ? "ЖЁЛТЫЙ" : "YELLOW")).append("   ");
-        sb.append(pill(GREEN, report.count(Verdict.GREEN), ru ? "ЗЕЛЁНЫЙ" : "GREEN"));
+        sb.append(pill(RED, report.count(Verdict.RED), m("ui.count.red"))).append("   ");
+        sb.append(pill(YELLOW, report.count(Verdict.YELLOW), m("ui.count.yellow"))).append("   ");
+        sb.append(pill(GREEN, report.count(Verdict.GREEN), m("ui.count.green")));
         if (report.count(Verdict.SKIPPED) > 0) {
             sb.append("   ").append(pill(GREY, report.count(Verdict.SKIPPED),
-                    ru ? "ПРОПУЩЕН" : "SKIPPED"));
+                    m("ui.count.skipped")));
         }
         if (report.securityCount() > 0) {
             sb.append("   ").append(pill(MAGENTA, report.securityCount(),
-                    ru ? "НА ПРОВЕРКУ" : "REVIEW"));
+                    m("ui.count.review")));
         }
         sb.append("\n\n");
 
-        section(sb, Verdict.RED, RED, report,
-                ru ? "КРАСНЫЕ — не запустятся" : "RED — will not run");
-        section(sb, Verdict.YELLOW, YELLOW, report,
-                ru ? "ЖЁЛТЫЕ — загрузятся, но есть проблемы" : "YELLOW — loads with problems");
+        section(sb, Verdict.RED, RED, report, m("ui.section.red"));
+        section(sb, Verdict.YELLOW, YELLOW, report, m("ui.section.yellow"));
         securitySection(sb, report);
-        section(sb, Verdict.SKIPPED, GREY, report,
-                ru ? "ПРОПУЩЕНЫ" : "SKIPPED");
+        section(sb, Verdict.SKIPPED, GREY, report, m("ui.section.skipped"));
 
         List<Report.PluginResult> green = report.byVerdict(Verdict.GREEN);
         if (!green.isEmpty()) {
-            sb.append(c(GREEN)).append(ru ? "ЗЕЛЁНЫЕ — проблем не найдено" : "GREEN — clean")
+            sb.append(c(GREEN)).append(m("ui.section.green"))
                     .append(c(RESET)).append(" (").append(green.size()).append(")\n");
             if (full) {
                 for (Report.PluginResult r : green) {
@@ -111,11 +122,7 @@ public final class TextRenderer {
         }
 
         sb.append(c(GREY))
-                .append(ru
-                        ? "Правила SNDoctor опираются на первоисточники (анонсы PaperMC, javadoc, "
-                          + "содержимое jar). Спорные и неподтверждённые изменения в набор не включены."
-                        : "SNDoctor's rules are backed by primary sources (PaperMC announcements, "
-                          + "javadocs, jar contents). Unverified claims are deliberately excluded.")
+                .append(m("ui.footer"))
                 .append(c(RESET)).append('\n');
         return sb.toString();
     }
@@ -146,9 +153,7 @@ public final class TextRenderer {
         if (list.isEmpty()) {
             return;
         }
-        String title = ru
-                ? "НА РУЧНУЮ ПРОВЕРКУ — это не приговор, это повод посмотреть"
-                : "NEEDS A HUMAN LOOK — not a verdict, just worth checking";
+        String title = m("ui.section.security");
         sb.append(c(MAGENTA)).append(c(BOLD)).append(title).append(c(RESET))
                 .append(" (").append(list.size()).append(")\n");
         sb.append(c(GREY)).append("─".repeat(70)).append(c(RESET)).append('\n');
@@ -182,7 +187,7 @@ public final class TextRenderer {
         sb.append(c(RESET)).append('\n');
 
         if (!r.error.isEmpty()) {
-            sb.append("    ").append(ru ? "ошибка: " : "error: ").append(r.error).append('\n');
+            sb.append("    ").append(m("ui.error")).append(' ').append(r.error).append('\n');
             return;
         }
         for (Finding f : r.findings) {
