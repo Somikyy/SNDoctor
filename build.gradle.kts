@@ -5,7 +5,14 @@ plugins {
 }
 
 group = "network.somikyy"
-version = "26.9.0"
+// The version lives in exactly one place - core/ScanService.VERSION. A second copy here reads
+// fine right up to the release where the two drift apart: the tag check reads the Java
+// constant and the jar name reads this line, so the workflow publishes a release with no jar.
+version = file("src/main/java/network/somikyy/sndoctor/core/ScanService.java")
+    .readLines()
+    .first { it.contains("VERSION =") }
+    .substringAfter('"')
+    .substringBefore('"')
 description = "Checks every plugin in your plugins folder for Minecraft 26.x compatibility"
 
 repositories {
