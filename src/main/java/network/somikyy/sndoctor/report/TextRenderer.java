@@ -9,6 +9,7 @@
  */
 package network.somikyy.sndoctor.report;
 
+import network.somikyy.sndoctor.core.Colors;
 import network.somikyy.sndoctor.core.Finding;
 import network.somikyy.sndoctor.core.Messages;
 import network.somikyy.sndoctor.core.Report;
@@ -46,14 +47,18 @@ public final class TextRenderer {
     }
 
     /**
-     * A label in the selected language.
+     * A label in the selected language, with colour codes removed.
      *
      * <p>Only wording comes from the catalogue. Spacing, indentation and where the colon sits
      * stay here, so no message value has to end in an invisible space to line the report up -
      * whitespace nobody can see is the first thing a hand-edited translation loses.
+     *
+     * <p>Colours are stripped rather than trusted to be absent: the report goes into a file and
+     * into a console that draw no markup, and this renderer has its own ANSI palette. An
+     * {@code &a} left in a label by an admin costs them the colour, not a readable report.
      */
     private String m(String key) {
-        return messages.get(key, ru);
+        return Colors.strip(messages.get(key, ru));
     }
 
     public String render(Report report) {

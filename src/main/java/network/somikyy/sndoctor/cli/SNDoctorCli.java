@@ -118,9 +118,19 @@ public final class SNDoctorCli {
             return;
         }
 
-        // --messages overrides the language actually being printed, so it is resolved after the
-        // whole argument list is read: --messages before --lang must work the same as after.
-        Messages messages = Messages.load(ru ? messagesFile : null, ru ? null : messagesFile);
+        Messages messages = Messages.load(messagesFile);
+        // The same trap as on a server, reached by a different road: --messages pointed at a full
+        // messages.yml wins over --lang, because the file has every key and the bundle is only
+        // consulted for the ones it lacks. A partial override file carries no language stamp, so
+        // this stays quiet for the one-key file the help text recommends. Written to stderr and
+        // not to stdout: stdout is the report, and a report is routinely redirected into a file
+        // or piped through something in CI.
+        String declared = messages.declaredLanguage();
+        if (declared != null && !declared.equalsIgnoreCase(ru ? "ru" : "en")) {
+            err.println("Файл " + messagesFile + " написан на языке " + declared + ", а --lang"
+                    + " просит " + (ru ? "ru" : "en") + ". Тексты берутся из файла, поэтому"
+                    + " отчёт выйдет на языке файла.");
+        }
 
         Report report = ScanService.scan(pluginsDir, serverJava, names, selfJarName(), messages);
 
@@ -186,9 +196,10 @@ public final class SNDoctorCli {
                   --json <файл>   сохранить машинный отчёт
                   --out <файл>    сохранить полный текстовый отчёт
                   --names <файл>  свой список Spigot-имён (дополняет встроенный)
-                  --messages <файл>  свои тексты находок вместо встроенных, формат ключ=значение.
-                                  Переопределяет тот язык, который выбран --lang. Можно указать
+                  --messages <файл>  свой messages.yml вместо встроенных текстов. Можно указать
                                   только те ключи, которые правишь — остальные возьмутся из jar.
+                                  Файл .txt старого формата (ключ=значение) тоже читается.
+                                  Цвета из него в отчёте вырезаются: у отчёта своя раскраска.
                   --lang ru|en    язык вывода, по умолчанию ru
                   --full          показывать и справочные находки, и все зелёные плагины
                   --no-color      без ANSI-цветов

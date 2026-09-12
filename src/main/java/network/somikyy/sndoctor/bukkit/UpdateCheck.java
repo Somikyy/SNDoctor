@@ -39,21 +39,14 @@ final class UpdateCheck {
     }
 
     /** Runs off the main thread and reports through the plugin logger, or says nothing. */
-    static void run(SNDoctorPlugin plugin, boolean russian) {
+    static void run(SNDoctorPlugin plugin, Texts texts) {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             String latest = fetch();
             if (latest == null || !isNewer(latest, ScanService.VERSION)) {
                 return;
             }
-            if (russian) {
-                plugin.getLogger().info("Доступна новая версия SNDoctor: " + latest
-                        + " (у тебя " + ScanService.VERSION + ")"
-                        + " — https://github.com/Somikyy/SNDoctor/releases");
-            } else {
-                plugin.getLogger().info("A newer SNDoctor is available: " + latest
-                        + " (you have " + ScanService.VERSION + ")"
-                        + " - https://github.com/Somikyy/SNDoctor/releases");
-            }
+            plugin.getLogger().info(texts.plain("update.available",
+                    "latest", latest, "current", ScanService.VERSION));
         });
     }
 

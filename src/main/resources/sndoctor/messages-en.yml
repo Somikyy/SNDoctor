@@ -1,0 +1,272 @@
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │  SNDoctor — every text the plugin shows. Edit freely: the plugin never       │
+# │  rewrites this file, it is yours from the first start.                       │
+# │                                                                              │
+# │  After editing run /sndoctor reload. A key you deleted or broke falls back   │
+# │  to the bundled text: this file cannot break the plugin.                     │
+# └──────────────────────────────────────────────────────────────────────────────┘
+#
+# COLOURS. Write them the way you already know - all four notations are understood,
+# mixed freely inside one value:
+#   &c  &l  &r              - the classic codes (§ works too);
+#   &#7B2FFF                - HEX, short form;
+#   &x&7&B&2&F&F&F          - HEX, the long Spigot-era form;
+#   <red> <#7B2FFF> <bold>  - MiniMessage tags, as in the rest of the SN suite.
+# Chat receives all of it as plain § codes: SNDoctor does not use Adventure, so it
+# keeps working on Spigot and on old Paper builds - the servers where things are
+# already broken and the report matters most. The honest price: <gradient>, <click>
+# and <hover> are not drawn in chat - the text survives, the effect does not.
+#
+# A bracket meant as text is escaped: '\<red>' prints the letters <red> rather than a
+# colour, and a backslash itself is doubled: '\\'. Chat and the log agree on both.
+#
+# WHERE COLOURS SHOW. In game chat only - the chat.* keys. Report texts (rule.* and
+# ui.*) go to a file, to the console and to the CLI, none of which render markup:
+# colours are stripped there, and the report paints itself.
+#
+# VALUES are single-quoted. An apostrophe inside is doubled: 'it''s here'.
+# PLACEHOLDERS like {plugin}, {java}, {version} are filled in by the plugin - keep them.
+
+# Which language this file is written in. The plugin compares the stamp with general.language
+# in config.yml and warns in the console when they disagree: once the file exists the texts come
+# from it, and switching the language in the config no longer changes anything.
+language: en
+
+# Pasted in front of chat lines. To take the plugin name out of all of them at
+# once, empty it:  prefix: ''
+prefix: '&bSNDoctor &8» '
+
+# ---------- game chat
+chat:
+  no-permission: '{prefix}&cYou are not allowed to do that.'
+  reload-done: '{prefix}&aconfig.yml and messages.yml reloaded.'
+  scanning: '{prefix}&7Checking plugins…'
+  already-scanning: '{prefix}&eA scan is already running, hold on.'
+  report-file: '{prefix}&7Full report: &f{path}'
+  scan-failed: '{prefix}&cScan failed: {reason}'
+
+  version:
+    line: '{prefix}&f{version} &7— target: {target}'
+    source: '&7Open source: &fgithub.com/Somikyy/SNDoctor'
+
+  help:
+    header: '{prefix}&7{version}'
+    scan: '&f/sndoctor scan &7— summary in chat, full report to a file'
+    full: '&f/sndoctor full &7— include informational findings'
+    lang: '&f/sndoctor scan --lang en &7— report in English'
+    reload: '&f/sndoctor reload &7— re-read config.yml and messages.yml'
+
+  # The post-scan summary. The first line carries the prefix, the rest do not:
+  # the plugin name on every line of a summary reads as spam.
+  summary:
+    header: '{prefix}&7{version} &8· &7target {target}'
+    red: '&cRed &f{count}'
+    yellow: '&eYellow &f{count}'
+    green: '&aGreen &f{count}'
+    review: '&dReview &f{count}'
+    red-header: '&cWill not run:'
+    red-line: ' &7• &f{plugin}{reason}'
+    red-reason: ' &8— &7{title}'
+    red-more: ' &8…and {count} more — see the report file'
+    all-clear: '&aNo critical problems found.'
+
+# ---------- the console line printed when a newer release exists
+update:
+  available: 'A newer SNDoctor is available: {latest} (you have {current}) - https://github.com/Somikyy/SNDoctor/releases'
+
+# ---------- findings: what was found, why it breaks, what to do
+# The key is built from the rule id - the same one that appears in the JSON report
+# and in the table in section 4 of docs/SPEC-SNDoctor.md.
+rule:
+
+  # BLOCKER
+  nms.spigot-mappings:
+    title: 'Spigot-mapped NMS names'
+    why: 'Since 26.1 Mojang no longer ships obfuscated server jars and Paper dropped its internal remapper. PaperMC: such a plugin "will not work on 26.1, no matter if you are using Paper or not".'
+    fix: 'Rebuild against Mojang mappings (paperweight-userdev) or replace the plugin.'
+
+  # BLOCKER
+  nms.legacy-versioned-package:
+    title: 'Version-stamped NMS package (pre-1.17)'
+    why: 'net.minecraft.server.v1_XX_RX packages disappeared in 1.17. This plugin cannot load on 1.17+ at all.'
+    fix: 'Written for 1.16 or older. Needs a rewrite or a replacement.'
+
+  # BLOCKER
+  craftbukkit.versioned:
+    title: 'Version-stamped CraftBukkit package'
+    why: 'Paper removed org.bukkit.craftbukkit.vX_Y_RZ relocation in 1.20.5. These references throw NoClassDefFoundError on load.'
+    fix: 'Use the unversioned org.bukkit.craftbukkit.* package or the public API.'
+
+  # WARN
+  nms.version-reflection:
+    title: 'Version detection via vX_Y_RZ string literals'
+    why: 'The plugin builds class names from the package version. Relocation is gone since 1.20.5, so this usually throws or silently degrades.'
+    fix: 'Drop version-based reflection; use the unversioned package or the API.'
+
+  # INFO
+  craftbukkit.direct:
+    title: 'Direct CraftBukkit usage'
+    why: 'The plugin touches server internals directly. Not broken by itself, but this is where major version bumps usually hurt.'
+    fix: 'Nothing to do - just test this plugin first after an upgrade.'
+
+  # WARN
+  api.conversation:
+    title: 'Conversation API (deprecated for removal)'
+    why: 'Paper 1.21.9/1.21.10: "This API has been unmaintained and largely unused for a long time... Hence, we have decided to deprecate it for removal."'
+    fix: 'Migrate to the Dialog API or listen to AsyncChatEvent manually.'
+
+  # WARN
+  api.metadata:
+    title: 'Metadata API (deprecated)'
+    why: 'Paper 1.21.9/1.21.10: "The entity/block entity Metadatable API has been deprecated as it is generally inferior to the PersistentDataContainer API."'
+    fix: 'Migrate to PersistentDataContainer.'
+
+  # WARN
+  api.player-spawn-location-event:
+    title: 'PlayerSpawnLocationEvent (deprecated)'
+    why: 'Paper 1.21.9/1.21.10: "Plugins should migrate to the AsyncPlayerSpawnLocationEvent as soon as possible, as listening to the PlayerSpawnLocationEvent has unintended side effects."'
+    fix: 'Migrate to AsyncPlayerSpawnLocationEvent.'
+
+  # BREAKING
+  api.teleport-flag-entitystate:
+    title: 'TeleportFlag.EntityState no longer functions'
+    why: 'Paper 1.21.9/1.21.10: "using TeleportFlag.EntityState no longer has any functionality". The flag is accepted and silently ignored.'
+    fix: 'Call closeInventory() and eject() manually before teleporting.'
+
+  # INFO
+  api.gamemode-change-cause:
+    title: 'New GAMEMODE_SWITCHER cause'
+    why: 'Paper 1.21.9 introduced GAMEMODE_SWITCHER, replacing COMMAND when a player uses the gamemode switcher. Code checking only COMMAND now misses cases.'
+    fix: 'Handle the new cause if the plugin inspects Cause.'
+
+  # WARN
+  api.legacy-material:
+    title: 'Pre-1.13 legacy item API'
+    why: 'org.bukkit.material, Material.getId() and durability-as-subtype predate the 1.13 flattening; long deprecated and unreliable.'
+    fix: 'Use named Material, BlockData and Damageable.'
+
+  # INFO
+  meta.not-a-plugin:
+    title: 'Not a plugin'
+    why: 'No plugin.yml or paper-plugin.yml. Usually a library dropped into plugins/ by mistake.'
+    fix: 'Remove it from plugins/ unless the server loads it explicitly.'
+
+  # BLOCKER
+  meta.main-class-missing:
+    title: 'Main class missing from jar'
+    why: 'The descriptor points at a main class that is not inside the archive. The server throws ClassNotFoundException on load.'
+    fix: 'Corrupt or mis-built jar. Re-download from the official source.'
+
+  # INFO
+  meta.paper-plugin:
+    title: 'Paper plugin (new loader)'
+    why: 'Uses paper-plugin.yml and Paper''s new loader. Some tooling (hot reload in particular) behaves differently with these.'
+    fix: 'Nothing to do.'
+
+  # WARN
+  meta.no-api-version:
+    title: 'Missing api-version'
+    why: 'Without api-version the server treats the plugin as a 1.12-era legacy plugin and enables material conversion. On modern versions this often ends in a refusal to load.'
+    fix: 'Author: add api-version to plugin.yml. Admin: check the startup log.'
+
+  # WARN
+  meta.ancient-api-version:
+    title: 'Very old api-version'
+    why: 'api-version {api} predates the 1.13 flattening.'
+    fix: 'Look for an update or a replacement.'
+
+  # BLOCKER
+  java.too-new:
+    title: 'Requires Java {java} but the server runs Java {server}'
+    why: 'Compiled for a newer Java. Loading fails with UnsupportedClassVersionError.'
+    fix: 'Upgrade the server JVM to {java} or use a build for an older Java.'
+
+  # INFO
+  java.required:
+    title: 'Requires Java {java}'
+    why: 'Minimum Java version this plugin can run on.'
+    fix: 'Note that Minecraft 26.2 itself requires Java 25.'
+
+  # INFO
+  folia.supported:
+    title: 'Declares Folia support'
+    why: 'The descriptor sets folia-supported: true.'
+    fix: 'Nothing to do.'
+
+  # INFO
+  meta.runtime-libraries:
+    title: 'Downloads dependencies at startup'
+    why: 'The plugin uses the libraries: section, so the server downloads artifacts at startup. No network means no load.'
+    fix: 'Relevant on servers without outbound network access.'
+
+  # WARN
+  scan.unreadable-classes:
+    title: 'Some classes could not be parsed'
+    why: '{bad} of {total} classes could not be parsed (obfuscation or a newer class file format). This report is incomplete.'
+    fix: 'Check manually. Heavy obfuscation in a free plugin is worth a second look.'
+
+  # WARN
+  dep.protocollib:
+    title: 'Depends on ProtocolLib'
+    why: 'ProtocolLib is the ecosystem''s most fragile shared dependency: last release 5.4.0 on 2025-08-09, with an open issue about OpenJDK removing final field reflection. If it breaks, everything depending on it breaks.'
+    fix: 'Verify ProtocolLib compatibility before upgrading; many plugins moved to PacketEvents.'
+
+  # INFO
+  dep.vault:
+    title: 'Depends on Vault'
+    why: 'Vault has not been updated since 2020; its Folia support request has been open since March 2024. VaultUnlocked is the maintained fork.'
+    fix: 'Consider VaultUnlocked if you are moving to Folia.'
+
+  # SECURITY
+  sec.process-execution:
+    title: 'Starts external processes'
+    why: 'The plugin calls Runtime.exec or ProcessBuilder. Normal for backup and restart plugins, worth a look anywhere else.'
+    fix: 'Compare against what the plugin claims to do.'
+
+  # SECURITY
+  sec.dynamic-class-loading:
+    title: 'Loads code at runtime'
+    why: 'URLClassLoader or defineClass found. Legitimate library loaders do this - so does remote payload loading.'
+    fix: 'Check whether the loaded code comes from a local file or from the network.'
+
+  # SECURITY
+  sec.suspicious-endpoints:
+    title: 'Unusual network endpoints'
+    why: 'String literals point at endpoints plugins rarely use: raw IPs, pastebins, webhooks, tunnels.'
+    fix: 'Check manually. Legitimate plugins talk to their own domain or well-known APIs.'
+
+  # SECURITY
+  sec.server-files:
+    title: 'Reads server configuration files'
+    why: 'The plugin references files holding the RCON password, operator list and bans. Normal for admin tooling; not normal alongside network activity.'
+    fix: 'Read together with the network findings: reading plus sending is a bad sign.'
+
+  # SECURITY
+  sec.masquerading-package:
+    title: 'Stray classes inside a well-known library package'
+    why: 'Only a couple of classes sit inside a well-known library package. Real shading brings hundreds. This is how foreign code hides - the backdoor found in May 2026 wore org.apache.commons.lang3 as a costume.'
+    fix: 'Decompile these classes before putting the plugin on a live server.'
+
+
+# ---------- report labels
+# Spacing and indentation are the renderer's job - only the words live here.
+ui:
+  header: 'plugin compatibility check for Minecraft'
+  directory: 'Directory:'
+  jars-found: 'Jars found:'
+  server-java: 'Server Java:'
+  took: 'Took:'
+  count:
+    red: 'RED'
+    yellow: 'YELLOW'
+    green: 'GREEN'
+    skipped: 'SKIPPED'
+    review: 'REVIEW'
+  section:
+    red: 'RED — will not run'
+    yellow: 'YELLOW — loads with problems'
+    skipped: 'SKIPPED'
+    green: 'GREEN — clean'
+    security: 'NEEDS A HUMAN LOOK — not a verdict, just worth checking'
+  error: 'error:'
+  footer: 'SNDoctor''s rules are backed by primary sources (PaperMC announcements, javadocs, jar contents). Unverified claims are deliberately excluded.'

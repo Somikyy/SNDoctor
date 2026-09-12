@@ -50,6 +50,14 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
     /** Replaced wholesale on reload, so a scan in flight keeps the settings it started with. */
     private volatile SNDoctorConfig config = SNDoctorConfig.defaults();
 
+    /**
+     * Replaced wholesale on reload for the same reason as {@link #config}.
+     *
+     * <p>Loaded once rather than per scan: the texts are needed by {@code /sndoctor version},
+     * by the help output and by the permission refusal, none of which run a scan.
+     */
+    private volatile Messages messages = Messages.bundled();
+
     @Override
     public void onEnable() {
         if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {
@@ -68,83 +76,110 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
 
         SNDoctorConfig current = config;
         if (current.updateCheck) {
-            UpdateCheck.run(this, current.russian);
+            UpdateCheck.run(this, new Texts(messages, current.russian));
         }
         if (current.scanOnStart) {
             // Delayed so the automatic scan does not interleave with other plugins still
             // logging their own startup, and so every jar is on disk by the time we read it.
             getServer().getScheduler().runTaskLaterAsynchronously(this,
-                    () -> performScan(null, current), current.startDelayTicks);
+                    () -> performScan(null, current, new Texts(messages, current.russian)),
+                    current.startDelayTicks);
         }
     }
 
-    /** Creates config.yml on first run and reads it; falls back to defaults if it is unreadable. */
+    /**
+     * Creates config.yml and messages.yml on first run and reads both; falls back to defaults
+     * and to the bundled texts if either is unreadable.
+     */
     private void loadConfiguration() {
         Path file = getDataFolder().toPath().resolve("config.yml");
         try {
             if (SNDoctorConfig.writeDefaultIfMissing(file)) {
                 config = SNDoctorConfig.load(file);
-                return;
+            } else {
+                getLogger().warning("config.yml не найден в jar, беру настройки по умолчанию.");
+                config = SNDoctorConfig.defaults();
             }
-            getLogger().warning("config.yml не найден в jar, беру настройки по умолчанию.");
         } catch (Exception ex) {
             getLogger().warning("Не удалось прочитать config.yml (" + ex.getMessage()
                     + "), беру настройки по умолчанию.");
+            config = SNDoctorConfig.defaults();
         }
-        config = SNDoctorConfig.defaults();
+        // messages.yml is seeded from the language config.yml just asked for, so it has to be
+        // done after the config is read, not before.
+        for (String line : Messages.install(getDataFolder().toPath(), config.russian)) {
+            getLogger().info(line);
+        }
+        messages = Messages.load(getDataFolder().toPath().resolve("messages.yml"));
+        // Flipping general.language on a server that already has messages.yml changes nothing,
+        // because the file covers every key. A warning is the difference between a setting and
+        // a mystery - and it belongs here rather than in install(), which does not run once the
+        // file exists, which is exactly when the flag stops working.
+        String languageMismatch = messages.languageMismatch(config.russian);
+        if (languageMismatch != null) {
+            getLogger().warning(languageMismatch);
+        }
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // Read the volatiles once, at the top: a /sndoctor reload landing between two reads
+        // would otherwise answer one command out of two different versions of the files.
+        SNDoctorConfig current = config;
+        String sub = args.length > 0 ? args[0].toLowerCase() : "scan";
+        Texts texts = new Texts(messages, langFrom(args, current));
+
         if (!sender.hasPermission("sndoctor.use")) {
-            sender.sendMessage("§cНет прав.");
+            texts.send(sender, "chat.no-permission");
             return true;
         }
-        String sub = args.length > 0 ? args[0].toLowerCase() : "scan";
 
         switch (sub) {
             case "scan", "full" -> {
-                // Read the volatile once: a /sndoctor reload between the two reads would
-                // otherwise mix settings from two different versions of the file.
-                SNDoctorConfig current = config;
                 startScan(sender, current.forRequest(
-                        sub.equals("full") || hasFlag(args, "--full"), langFrom(args, current)));
+                        sub.equals("full") || hasFlag(args, "--full"), texts.russian()), texts);
                 return true;
             }
             case "reload" -> {
                 if (!sender.hasPermission("sndoctor.reload")) {
-                    sender.sendMessage("§cНет прав.");
+                    texts.send(sender, "chat.no-permission");
                     return true;
                 }
                 loadConfiguration();
-                sender.sendMessage("§aConfig.yml перечитан.");
+                // Built again on purpose: the texts the confirmation is written in are the
+                // ones that were just loaded, not the ones the command started with.
+                new Texts(messages, langFrom(args, config)).send(sender, "chat.reload-done");
                 return true;
             }
             case "version" -> {
-                sender.sendMessage("§bSNDoctor §f" + ScanService.VERSION
-                        + " §7— цель: " + Analyzer.TARGET);
-                sender.sendMessage("§7Открытый код: §fgithub.com/Somikyy/SNDoctor");
+                texts.send(sender, "chat.version.line",
+                        "version", ScanService.VERSION, "target", Analyzer.TARGET);
+                texts.send(sender, "chat.version.source");
                 return true;
             }
             default -> {
-                sender.sendMessage("§bSNDoctor §7" + ScanService.VERSION);
-                sender.sendMessage("§f/sndoctor scan §7— краткий отчёт в чат, полный в файл");
-                sender.sendMessage("§f/sndoctor full §7— показать и справочные находки");
-                sender.sendMessage("§f/sndoctor scan --lang en §7— отчёт на английском");
-                sender.sendMessage("§f/sndoctor reload §7— перечитать config.yml");
+                // Keys spelled out rather than composed in a loop: the self-test greps this
+                // file for the keys it uses and checks every one of them exists, and a key
+                // built out of pieces is one the grep cannot see.
+                texts.send(sender, "chat.help.header", "version", ScanService.VERSION);
+                texts.send(sender, "chat.help.scan");
+                texts.send(sender, "chat.help.full");
+                texts.send(sender, "chat.help.lang");
+                texts.send(sender, "chat.help.reload");
                 return true;
             }
         }
     }
 
-    private void startScan(CommandSender sender, SNDoctorConfig settings) {
+    private void startScan(CommandSender sender, SNDoctorConfig settings, Texts texts) {
         if (scanning) {
-            sender.sendMessage("§eПроверка уже идёт, подожди.");
+            texts.send(sender, "chat.already-scanning");
             return;
         }
-        sender.sendMessage("§7Проверяю плагины…");
+        texts.send(sender, "chat.scanning");
         // Reading dozens of jars is disk-bound work; keep it off the main thread.
-        getServer().getScheduler().runTaskAsynchronously(this, () -> performScan(sender, settings));
+        getServer().getScheduler().runTaskAsynchronously(this,
+                () -> performScan(sender, settings, texts));
     }
 
     /**
@@ -152,7 +187,7 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
      *
      * @param sender who asked, or {@code null} for the automatic scan at startup
      */
-    private void performScan(CommandSender sender, SNDoctorConfig settings) {
+    private void performScan(CommandSender sender, SNDoctorConfig settings, Texts texts) {
         if (scanning) {
             return;
         }
@@ -161,10 +196,7 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
             File pluginsDir = getDataFolder().getParentFile();
             Path data = getDataFolder().toPath();
             Path override = data.resolve("spigot-names.txt");
-            // Texts are overridable next to the config, same as the Spigot name table: drop in
-            // messages-ru.txt with only the lines you want changed, nothing gets rebuilt.
-            Messages messages = Messages.load(
-                    data.resolve("messages-ru.txt"), data.resolve("messages-en.txt"));
+            Messages messages = texts.messages();
             Report report = ScanService.scan(
                     pluginsDir,
                     ScanService.currentJavaVersion(),
@@ -174,28 +206,37 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
             report.serverVersion = safeServerVersion();
 
             Path reportPath = settings.reportsEnabled ? writeReports(report, settings, messages) : null;
-            List<String> summary = summarise(report, settings.russian);
 
             if (sender == null) {
                 // Startup scan: the console is the only audience, and it gets the short form.
                 // Anyone who wants the detail has the file, or can run /sndoctor full.
-                for (String line : summary) {
-                    getLogger().info(strip(line));
+                //
+                // Rendered plain from the same keys rather than by taking the colours back out
+                // of the chat summary. The two are not the same thing: a chat line is legacy
+                // §-codes, and stripping it reads a second time text the first pass already
+                // decided about - "&<gradient:#7B2FFF:#00E1FF>cотчёт" leaves "&cотчёт" in chat,
+                // where the ampersand is text the player sees, and a second pass eats it as a
+                // colour code. The raw value is converted once, for the sink that prints it.
+                for (String line : summarise(report, texts, texts::plain)) {
+                    // Trimmed: the chat summary indents its bullets, and a log line that starts
+                    // with a space reads as a formatting bug in the console.
+                    getLogger().info(line.trim());
                 }
                 if (reportPath != null) {
-                    getLogger().info("Полный отчёт: " + reportPath);
+                    getLogger().info(texts.plain("chat.report-file", "path", reportPath.toString()));
                 }
                 scanning = false;
                 return;
             }
 
+            List<String> summary = summarise(report, texts, texts::chat);
             String full = new TextRenderer(settings.russian, false, settings.full, messages).render(report);
             getServer().getScheduler().runTask(this, () -> {
                 for (String line : summary) {
                     sender.sendMessage(line);
                 }
                 if (reportPath != null) {
-                    sender.sendMessage("§7Полный отчёт: §f" + reportPath);
+                    texts.send(sender, "chat.report-file", "path", reportPath.toString());
                 }
                 getLogger().info(System.lineSeparator() + full);
                 scanning = false;
@@ -207,38 +248,62 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
                 return;
             }
             getServer().getScheduler().runTask(this, () -> {
-                sender.sendMessage("§cОшибка проверки: " + ex.getMessage());
+                texts.send(sender, "chat.scan-failed", "reason", ex.getMessage());
                 scanning = false;
             });
         }
     }
 
-    /** Chat gets a short, readable summary; the file gets everything. */
-    private List<String> summarise(Report report, boolean ru) {
+    /**
+     * A short, readable summary; the file gets everything.
+     *
+     * <p>The sink is a parameter rather than a fixed {@code texts.chat}: the same keys are what
+     * the console sees at startup, and the console needs them rendered plain from the raw value
+     * instead of stripped back out of the chat form. Static and package-private so the
+     * self-test can render a real summary without a running server.
+     */
+    static List<String> summarise(Report report, Texts texts, Texts.Line line) {
         List<String> lines = new ArrayList<>();
-        lines.add("§bSNDoctor §7" + ScanService.VERSION + " §8· §7цель " + Analyzer.TARGET);
-        lines.add("§cКрасных §f" + report.count(Report.Verdict.RED)
-                + "  §eЖёлтых §f" + report.count(Report.Verdict.YELLOW)
-                + "  §aЗелёных §f" + report.count(Report.Verdict.GREEN)
-                + (report.securityCount() > 0
-                ? "  §dНа проверку §f" + report.securityCount() : ""));
+        lines.add(line.of("chat.summary.header",
+                "version", ScanService.VERSION, "target", Analyzer.TARGET));
+
+        // The counters are four separate keys joined here rather than one key with four holes:
+        // the review counter only appears when there is something to review, and a translator
+        // must not have to keep the spacing of a line that changes shape.
+        StringBuilder counts = new StringBuilder()
+                .append(count(line, "chat.summary.red", report.count(Report.Verdict.RED)))
+                .append("  ")
+                .append(count(line, "chat.summary.yellow", report.count(Report.Verdict.YELLOW)))
+                .append("  ")
+                .append(count(line, "chat.summary.green", report.count(Report.Verdict.GREEN)));
+        if (report.securityCount() > 0) {
+            counts.append("  ")
+                    .append(count(line, "chat.summary.review", report.securityCount()));
+        }
+        lines.add(counts.toString());
 
         List<Report.PluginResult> red = report.byVerdict(Report.Verdict.RED);
         if (!red.isEmpty()) {
-            lines.add("§cНе запустятся:");
+            lines.add(line.of("chat.summary.red-header"));
             for (int i = 0; i < Math.min(10, red.size()); i++) {
                 Report.PluginResult r = red.get(i);
-                String reason = r.findings.isEmpty() ? "" : " §8— §7" + r.findings.get(0).title(ru);
-                lines.add(" §7• §f" + r.facts.displayName() + reason);
+                String reason = r.findings.isEmpty() ? "" : line.of("chat.summary.red-reason",
+                        "title", r.findings.get(0).title(texts.russian()));
+                lines.add(line.of("chat.summary.red-line",
+                        "plugin", r.facts.displayName(), "reason", reason));
             }
             if (red.size() > 10) {
-                lines.add(" §8…и ещё " + (red.size() - 10) + " — смотри файл отчёта");
+                lines.add(count(line, "chat.summary.red-more", red.size() - 10));
             }
         }
         if (red.isEmpty() && report.count(Report.Verdict.YELLOW) == 0) {
-            lines.add("§aКритичных проблем не найдено.");
+            lines.add(line.of("chat.summary.all-clear"));
         }
         return lines;
+    }
+
+    private static String count(Texts.Line line, String key, int value) {
+        return line.of(key, "count", String.valueOf(value));
     }
 
     private Path writeReports(Report report, SNDoctorConfig settings, Messages messages) {
@@ -310,19 +375,6 @@ public final class SNDoctorPlugin extends JavaPlugin implements CommandExecutor,
         } catch (Exception ex) {
             return null;
         }
-    }
-
-    /** Console has no colour codes to render, so drop the section signs rather than print them. */
-    private static String strip(String line) {
-        StringBuilder out = new StringBuilder(line.length());
-        for (int i = 0; i < line.length(); i++) {
-            if (line.charAt(i) == '§' && i + 1 < line.length()) {
-                i++;
-            } else {
-                out.append(line.charAt(i));
-            }
-        }
-        return out.toString().trim();
     }
 
     private static boolean hasFlag(String[] args, String flag) {

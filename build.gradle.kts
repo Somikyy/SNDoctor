@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "network.somikyy"
-version = "26.8.1"
+version = "26.9.0"
 description = "Checks every plugin in your plugins folder for Minecraft 26.x compatibility"
 
 repositories {

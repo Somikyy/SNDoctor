@@ -78,18 +78,29 @@ public final class Analyzer {
      * Builds a finding, taking its three texts from the message catalogue by rule id.
      *
      * <p>The id is now the only thing a rule says about its own wording. Everything a user
-     * reads lives in {@code sndoctor/messages-<lang>.txt}, so fixing a translation is a text
-     * edit rather than a rebuild, and adding a language is a new file rather than a patch to
-     * this class.
+     * reads lives in {@code messages.yml}, so fixing a translation is a text edit rather than a
+     * rebuild, and adding a language is a new file rather than a patch to this class.
      */
     private Finding newFinding(String id, Severity severity, String... placeholders) {
         String title = "rule." + id + ".title";
         String why = "rule." + id + ".why";
         String fix = "rule." + id + ".fix";
         return new Finding(id, severity, new Text(
-                messages.get(title, true, placeholders), messages.get(title, false, placeholders),
-                messages.get(why, true, placeholders), messages.get(why, false, placeholders),
-                messages.get(fix, true, placeholders), messages.get(fix, false, placeholders)));
+                text(title, true, placeholders), text(title, false, placeholders),
+                text(why, true, placeholders), text(why, false, placeholders),
+                text(fix, true, placeholders), text(fix, false, placeholders)));
+    }
+
+    /**
+     * One catalogue text, with colour codes removed.
+     *
+     * <p>Finding texts end up in three places that render no markup at all - the report file,
+     * the CLI stdout and the JSON - so an {@code &c} an admin pasted into a rule text has to be
+     * taken out here rather than printed at the reader. The report paints itself in ANSI; the
+     * catalogue only supplies words.
+     */
+    private String text(String key, boolean russian, String... placeholders) {
+        return Colors.strip(messages.get(key, russian, placeholders));
     }
 
     // ------------------------------------------------------------- rule data
